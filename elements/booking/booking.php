@@ -32,11 +32,21 @@ Class Booking extends \Bricks\Element
     }
 
     public function enqueue_scripts() {
+        $plugin_root_url    = plugin_dir_url(dirname(__FILE__, 2));
+        $plugin_root_path   = plugin_dir_path(dirname(__FILE__, 1));
+
         wp_enqueue_style(
             'h-booking',
-            plugin_dir_url(__FILE__) . 'booking.css',
+            $plugin_root_url . 'dist/booking.css',
             [],
-            filemtime(plugin_dir_path(__FILE__) . 'booking.css')
+            $plugin_root_path . 'booking.css'
+        );
+
+        wp_enqueue_style(
+            'h-booking',
+            $plugin_root_url . 'dist/booking.ts',
+            [],
+            $plugin_root_path . 'booking.ts'
         );
     }
 
