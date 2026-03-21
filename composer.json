@@ -1,0 +1,8 @@
+{
+    "name": "root/h-bricks-elements",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "*",
+        "wp-coding-standards/wpcs": "*",
+        "dealerdirect/phpcodesniffer-composer-installer": "*"
+    }
+}
