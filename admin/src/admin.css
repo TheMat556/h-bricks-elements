@@ -1,0 +1,92 @@
+html.wp-toolbar {
+	background: #f5f7fb;
+}
+
+#wpcontent {
+	padding-left: 0;
+}
+
+.hbe-admin-layout-root {
+	min-height: calc(100vh - 32px);
+	background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+}
+
+.hbe-admin-sider {
+	background: #0f172a !important;
+}
+
+.hbe-sider-inner {
+	padding: 20px 16px;
+	position: sticky;
+	top: 32px;
+}
+
+.hbe-sider-divider {
+	border-color: rgba(255, 255, 255, 0.14);
+}
+
+.hbe-admin-content {
+	padding: 24px;
+}
+
+.hbe-admin-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.hbe-admin-spinner {
+	display: grid;
+	place-items: center;
+	min-height: 50vh;
+}
+
+.ant-layout-sider .ant-segmented {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.ant-layout-sider .ant-segmented-item-label {
+	color: #fff;
+}
+
+.ant-layout-sider .ant-menu {
+	background: transparent;
+	border-inline-end: none;
+}
+
+.ant-layout-sider .ant-menu-item,
+.ant-layout-sider .ant-menu-submenu-title {
+	color: rgba(255, 255, 255, 0.86);
+	margin-inline: 0;
+	width: 100%;
+	border-radius: 10px;
+}
+
+.ant-layout-sider .ant-menu-item-selected {
+	background: rgba(255, 255, 255, 0.16) !important;
+	color: #fff !important;
+}
+
+.ant-card {
+	border-radius: 18px;
+	box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.ant-alert {
+	margin-bottom: 16px;
+}
+
+input[type="date"] {
+	padding: 7px 11px;
+	border: 1px solid #d9d9d9;
+	border-radius: 8px;
+	font: inherit;
+}
+
+@media (max-width: 960px) {
+	.hbe-admin-header {
+		flex-direction: column;
+	}
+}
