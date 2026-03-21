@@ -1,18 +1,24 @@
 {
-  "name": "h-bricks-elements",
-  "private": true,
-  "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "flatpickr": "^4.6.13",
-    "vite": "^8.0.1"
-  }
+	"name": "h-bricks-elements",
+	"private": true,
+	"scripts": {
+		"dev": "vite build --watch",
+		"build": "vite build",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"format:check": "biome format .",
+		"check": "biome check .",
+		"check:fix": "biome check --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.8",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"flatpickr": "^4.6.13",
+		"vite": "^8.0.1"
+	}
 }
