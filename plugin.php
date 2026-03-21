@@ -19,7 +19,7 @@ define( 'HBE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'HBE_PLUGIN_VERSION', '0.1.0' );
 
 /**
- * Loads plugin PHP files.
+ * Loads plugin PHP files that are safe outside Bricks runtime.
  *
  * @return void
  */
@@ -32,7 +32,6 @@ function hbe_load_plugin_files() {
 		HBE_PLUGIN_PATH . 'includes/class-rest-api.php',
 		HBE_PLUGIN_PATH . 'includes/class-admin-page.php',
 		HBE_PLUGIN_PATH . 'includes/class-bricks-form-action.php',
-		HBE_PLUGIN_PATH . 'elements/booking/class-booking.php',
 	);
 
 	foreach ( $include_files as $file ) {
@@ -76,10 +75,11 @@ add_filter(
 add_action(
 	'init',
 	function () {
-		if ( ! class_exists( '\Bricks\Elements' ) ) {
+		if ( ! class_exists( '\\Bricks\\Elements' ) ) {
 			return;
 		}
 
+		require_once HBE_PLUGIN_PATH . 'elements/booking/class-booking.php';
 		\Bricks\Elements::register_element( HBE_PLUGIN_PATH . 'elements/booking/class-booking.php' );
 	},
 	11
