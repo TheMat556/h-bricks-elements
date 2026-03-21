@@ -25,7 +25,7 @@ add_action(
 	'init',
 	function () {
 		$element_files = array(
-			__DIR__ . '/elements/booking/booking.php',
+			__DIR__ . '/elements/booking/class.booking.php',
 		);
 
 		foreach ( $element_files as $file ) {

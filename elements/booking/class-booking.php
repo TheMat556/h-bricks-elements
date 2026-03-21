@@ -52,14 +52,14 @@ class Booking extends \Bricks\Element {
 	public function set_controls() {
 		$this->controls['showServices'] = array(
 			'tab'     => 'content',
-			'label'   => esc_html__( 'Services anzeigen', 'h-bricks-elements'),
+			'label'   => esc_html__( 'Services anzeigen', 'h-bricks-elements' ),
 			'type'    => 'checkbox',
 			'default' => true,
 		);
 
 		$this->controls['showSlots'] = array(
 			'tab'     => 'content',
-			'label'   => esc_html__( 'Zeitslots anzeigen', 'h-bricks-elements'),
+			'label'   => esc_html__( 'Zeitslots anzeigen', 'h-bricks-elements' ),
 			'type'    => 'checkbox',
 			'default' => true,
 		);
