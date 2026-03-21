@@ -33,20 +33,20 @@ Class Booking extends \Bricks\Element
 
     public function enqueue_scripts() {
         $plugin_root_url    = plugin_dir_url(dirname(__FILE__, 2));
-        $plugin_root_path   = plugin_dir_path(dirname(__FILE__, 1));
+        $plugin_root_path   = plugin_dir_path(dirname(__FILE__, 2));
 
         wp_enqueue_style(
             'h-booking',
             $plugin_root_url . 'dist/booking.css',
             [],
-            $plugin_root_path . 'booking.css'
+            filemtime($plugin_root_path . 'dist/booking.css')
         );
 
-        wp_enqueue_style(
+        wp_enqueue_script(
             'h-booking',
-            $plugin_root_url . 'dist/booking.ts',
+            $plugin_root_url . 'dist/booking.js',
             [],
-            $plugin_root_path . 'booking.ts'
+            filemtime($plugin_root_path . 'dist/booking.js')
         );
     }
 
@@ -62,11 +62,9 @@ Class Booking extends \Bricks\Element
         echo  "<div {$this->render_attributes('_root')}>";
             if ($show_services) include __DIR__ . '/templates/col-services.php';
             
+            include __DIR__ . '/templates/col-calendar.php';
+
             echo "<div class='h-cal-col'>
-                <div>Kalender</div>
-                <div>TEST2</div>
-            </div>
-            <div class='h-cal-col'>
                 <div>Zeitslot</div>
                 <div>TEST3</div>
             </div>";
