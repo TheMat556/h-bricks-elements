@@ -4,6 +4,7 @@
  * Description: Module that adds some custom Bricks Builder Elements
  * Version: 0.0.0
  * Author: Matthias Hader
+ * Text Domain: h-bricks-elements
  *
  * @package H-Bricks-Elements
  */

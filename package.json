@@ -12,13 +12,13 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.8",
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+    "vite": "^8.0.1"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"flatpickr": "^4.6.13",
-		"vite": "^8.0.1"
+		"flatpickr": "^4.6.13"
 	}
 }

@@ -26,7 +26,7 @@ class Booking extends \Bricks\Element {
 	 *
 	 * @var string
 	 */
-	public $name = 'h-booking-calender';
+	public $name = 'h-booking-calendar';
 
 	/**
 	 * Element icon.
@@ -52,14 +52,14 @@ class Booking extends \Bricks\Element {
 	public function set_controls() {
 		$this->controls['showServices'] = array(
 			'tab'     => 'content',
-			'label'   => esc_html__( 'Services anzeigen' ),
+			'label'   => esc_html__( 'Services anzeigen', 'h-bricks-elements'),
 			'type'    => 'checkbox',
 			'default' => true,
 		);
 
 		$this->controls['showSlots'] = array(
 			'tab'     => 'content',
-			'label'   => esc_html__( 'Zeitslots anzeigen' ),
+			'label'   => esc_html__( 'Zeitslots anzeigen', 'h-bricks-elements'),
 			'type'    => 'checkbox',
 			'default' => true,
 		);
