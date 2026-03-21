@@ -1,17 +1,19 @@
 import { resolve } from "node:path";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	plugins: [react()],
 	build: {
 		outDir: "dist",
 		emptyOutDir: false,
 		rollupOptions: {
 			input: {
-				booking: resolve(__dirname, "elements/booking/src/booking.ts"),
+				admin: resolve(__dirname, "admin/src/admin.tsx"),
 			},
 			output: {
-				entryFileNames: "[name].js", // → dist/booking.js
-				assetFileNames: "[name][extname]", // → dist/booking.css
+				entryFileNames: "[name].js",
+				assetFileNames: "[name][extname]",
 			},
 		},
 	},

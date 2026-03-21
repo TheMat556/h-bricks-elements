@@ -1,4 +1,4 @@
-<div class="h-cal-col">
+<div class="h-cal-col h-cal-col-services">
     <h3>Services</h3>
-    <p>TEST</p>
+    <div class="hbe-services" data-role="services"></div>
 </div>

@@ -1,10 +1,89 @@
-.h-cal-mount {
-	display: flex;
-	flex-direction: row;
+.h-calendar {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 18px;
+	padding: 20px;
+	border: 1px solid #d8e0e8;
+	border-radius: 18px;
+	background: linear-gradient(180deg, #fbfdff 0%, #f3f8fc 100%);
 }
 
 .h-cal-col {
 	display: flex;
 	flex-direction: column;
-	background-color: lightblue;
+	gap: 14px;
+	padding: 18px;
+	border: 1px solid #dbe4ec;
+	border-radius: 16px;
+	background: #fff;
+	min-height: 280px;
+}
+
+.h-cal-col h3 {
+	margin: 0;
+	font-size: 18px;
+}
+
+.h-cal-mount .flatpickr-calendar {
+	box-shadow: none;
+	border: none;
+}
+
+.hbe-services,
+.hbe-slots {
+	display: grid;
+	gap: 10px;
+}
+
+.hbe-service-card,
+.hbe-slot-button {
+	padding: 14px;
+	border-radius: 14px;
+	border: 1px solid #d0dae4;
+	background: #f8fbff;
+	text-align: left;
+	cursor: pointer;
+	font: inherit;
+	transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.hbe-service-card:hover,
+.hbe-slot-button:hover {
+	transform: translateY(-1px);
+	border-color: #1f7ae0;
+}
+
+.hbe-service-card strong {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--service-color, #1f7ae0);
+}
+
+.hbe-service-card span {
+	display: block;
+	color: #52606d;
+	font-size: 14px;
+}
+
+.hbe-service-card.is-active,
+.hbe-slot-button.is-active {
+	border-color: #1f7ae0;
+	background: #eaf3ff;
+}
+
+.hbe-selection,
+.hbe-empty {
+	margin: 0;
+	color: #52606d;
+	font-size: 14px;
+}
+
+.hbe-hidden-fields {
+	display: none;
+}
+
+@media (max-width: 1024px) {
+	.h-calendar {
+		grid-template-columns: 1fr;
+	}
 }

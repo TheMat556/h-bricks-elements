@@ -1,0 +1,268 @@
+.hbe-admin-app {
+	padding: 24px;
+	color: #17212b;
+}
+
+.hbe-page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.hbe-page-header h1 {
+	margin: 0 0 6px;
+	font-size: 28px;
+}
+
+.hbe-page-header p {
+	margin: 0;
+	color: #52606d;
+}
+
+.hbe-layout {
+	display: grid;
+	grid-template-columns: 280px minmax(0, 1fr);
+	gap: 20px;
+}
+
+.hbe-sidebar,
+.hbe-panel {
+	background: #fff;
+	border: 1px solid #d5dde5;
+	border-radius: 14px;
+	box-shadow: 0 8px 24px rgba(18, 38, 63, 0.06);
+}
+
+.hbe-sidebar {
+	padding: 18px;
+	height: fit-content;
+	position: sticky;
+	top: 24px;
+}
+
+.hbe-sidebar h2,
+.hbe-panel h2 {
+	margin: 0 0 14px;
+	font-size: 18px;
+}
+
+.hbe-content {
+	display: grid;
+	gap: 20px;
+}
+
+.hbe-panel {
+	padding: 20px;
+}
+
+.hbe-panel-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.hbe-calendar-list {
+	display: grid;
+	gap: 10px;
+}
+
+.hbe-calendar-item {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	border: 1px solid #d5dde5;
+	background: #f8fafc;
+	cursor: pointer;
+	text-align: left;
+}
+
+.hbe-calendar-item.is-active {
+	border-color: #1f7ae0;
+	background: #eaf3ff;
+}
+
+.hbe-calendar-item small {
+	color: #52606d;
+}
+
+.hbe-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+	margin-bottom: 16px;
+}
+
+.hbe-form-grid label,
+.hbe-weekday-card {
+	display: grid;
+	gap: 8px;
+}
+
+.hbe-form-grid span,
+.hbe-weekday-card span {
+	font-size: 13px;
+	font-weight: 600;
+	color: #334155;
+}
+
+.hbe-form-grid input,
+.hbe-form-grid textarea,
+.hbe-form-grid select,
+.hbe-weekday-card input {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #c7d2de;
+	border-radius: 10px;
+	font: inherit;
+	background: #fff;
+	box-sizing: border-box;
+}
+
+.hbe-form-grid textarea {
+	min-height: 92px;
+	resize: vertical;
+}
+
+.hbe-span-2 {
+	grid-column: span 2;
+}
+
+.hbe-checkbox {
+	display: flex !important;
+	align-items: center;
+	gap: 10px;
+}
+
+.hbe-checkbox input[type="checkbox"] {
+	width: auto;
+	margin: 0;
+}
+
+.hbe-weekday-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.hbe-weekday-card {
+	padding: 12px;
+	border: 1px solid #dbe4ec;
+	border-radius: 12px;
+	background: #f8fafc;
+}
+
+.hbe-button {
+	padding: 10px 14px;
+	border: 1px solid #c8d2dc;
+	border-radius: 999px;
+	background: #fff;
+	cursor: pointer;
+	font: inherit;
+}
+
+.hbe-button-primary {
+	border-color: #1f7ae0;
+	background: #1f7ae0;
+	color: #fff;
+}
+
+.hbe-button-danger {
+	border-color: #d14343;
+	color: #d14343;
+}
+
+.hbe-notice {
+	padding: 12px 14px;
+	border-radius: 12px;
+	margin-bottom: 16px;
+}
+
+.hbe-notice-success {
+	background: #ecfdf3;
+	border: 1px solid #9dd8b6;
+	color: #116149;
+}
+
+.hbe-notice-error {
+	background: #fff1f2;
+	border: 1px solid #f0b6be;
+	color: #b42318;
+}
+
+.hbe-list-table {
+	display: grid;
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.hbe-list-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	padding: 14px;
+	border: 1px solid #dde5ec;
+	border-radius: 12px;
+	background: #fbfdff;
+}
+
+.hbe-list-row p {
+	margin: 4px 0 0;
+	color: #52606d;
+}
+
+.hbe-row-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.hbe-list-row-booking select {
+	min-width: 140px;
+	padding: 10px 12px;
+	border: 1px solid #c7d2de;
+	border-radius: 10px;
+	background: #fff;
+}
+
+@media (max-width: 1024px) {
+	.hbe-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.hbe-sidebar {
+		position: static;
+	}
+
+	.hbe-weekday-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 720px) {
+	.hbe-page-header,
+	.hbe-panel-header,
+	.hbe-list-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.hbe-form-grid,
+	.hbe-weekday-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.hbe-span-2 {
+		grid-column: span 1;
+	}
+
+	.hbe-row-actions {
+		width: 100%;
+	}
+}
