@@ -1,0 +1,17 @@
+{
+	"name": "root/h-bricks-elements",
+	"scripts": {
+		"lint": "phpcs",
+		"lint:fix": "phpcbf"
+	},
+	"require-dev": {
+		"squizlabs/php_codesniffer": "*",
+		"wp-coding-standards/wpcs": "^3.3",
+		"dealerdirect/phpcodesniffer-composer-installer": "*"
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	}
+}

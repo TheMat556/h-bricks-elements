@@ -1,0 +1,10 @@
+.h-cal-mount {
+	display: flex;
+	flex-direction: row;
+}
+
+.h-cal-col {
+	display: flex;
+	flex-direction: column;
+	background-color: lightblue;
+}
