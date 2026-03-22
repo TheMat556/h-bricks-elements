@@ -4,14 +4,14 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	build: {
 		outDir: "dist",
-		emptyOutDir: true,
+		emptyOutDir: false,
 		rollupOptions: {
 			input: {
 				booking: resolve(__dirname, "elements/booking/src/booking.ts"),
 			},
 			output: {
-				entryFileNames: "[name].js", // → dist/booking.js
-				assetFileNames: "[name][extname]", // → dist/booking.css
+				entryFileNames: "[name].js",
+				assetFileNames: "[name][extname]",
 			},
 		},
 	},

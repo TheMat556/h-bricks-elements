@@ -1,0 +1,361 @@
+/* ── WP style reset ─────────────────────────────────────────────── */
+#h-bricks-admin-root {
+	all: initial;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	color: #262626;
+	line-height: 1.5;
+	box-sizing: border-box;
+	display: block;
+}
+
+#h-bricks-admin-root {
+	height: 100%;
+}
+
+#h-bricks-admin-root *,
+#h-bricks-admin-root *::before,
+#h-bricks-admin-root *::after {
+	box-sizing: border-box;
+}
+
+/* ── Base ───────────────────────────────────────────────────────── */
+.rbc-calendar {
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 13px;
+	color: #262626;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* ── Hide default toolbar ───────────────────────────────────────── */
+.rbc-toolbar {
+	display: none;
+}
+
+/* ── Header row ─────────────────────────────────────────────────── */
+.rbc-time-view .rbc-header,
+.rbc-month-view .rbc-header {
+	padding: 10px 4px;
+	font-weight: 600;
+	font-size: 12px;
+	color: #8c8c8c;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	border-bottom: 1px solid #f0f0f0;
+	background: #fafafa;
+}
+
+.rbc-today {
+	background-color: rgba(22, 119, 255, 0.03) !important;
+}
+
+.rbc-header.rbc-today a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	background: #1677ff;
+	color: #fff !important;
+	border-radius: 50%;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+/* ── Time gutter ────────────────────────────────────────────────── */
+.rbc-time-gutter .rbc-timeslot-group {
+	border-bottom: none;
+}
+
+.rbc-time-gutter .rbc-time-slot {
+	font-size: 11px;
+	color: #bfbfbf;
+	text-align: right;
+	padding-right: 8px;
+	line-height: 1;
+}
+
+/* ── Grid lines ─────────────────────────────────────────────────── */
+.rbc-timeslot-group {
+	border-bottom: 1px solid #f0f0f0;
+	min-height: 48px;
+}
+
+.rbc-time-slot {
+	border-top: 1px dashed #f5f5f5;
+}
+
+.rbc-time-slot:first-child {
+	border-top: none;
+}
+
+.rbc-time-content {
+	border-top: 1px solid #f0f0f0;
+	overflow-y: auto;
+}
+
+.rbc-time-content > * + * > * {
+	border-left: 1px solid #f0f0f0;
+}
+
+.rbc-month-row {
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.rbc-day-bg + .rbc-day-bg {
+	border-left: 1px solid #f0f0f0;
+}
+
+/* ── Current time indicator ─────────────────────────────────────── */
+.rbc-current-time-indicator {
+	background-color: #1677ff;
+	height: 2px;
+}
+
+.rbc-current-time-indicator::before {
+	content: "";
+	position: absolute;
+	left: -4px;
+	top: -3px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #1677ff;
+}
+
+/* ── Events ─────────────────────────────────────────────────────── */
+.rbc-event {
+	border-radius: 6px !important;
+	border: none !important;
+	padding: 3px 6px !important;
+	font-size: 12px !important;
+}
+
+.rbc-event:focus {
+	outline: none;
+	box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.3) !important;
+}
+
+.rbc-event-label {
+	font-size: 10px;
+	opacity: 0.85;
+}
+
+.rbc-event-content {
+	font-weight: 600;
+}
+
+/* ── Selection highlight ────────────────────────────────────────── */
+.rbc-slot-selection {
+	background: rgba(22, 119, 255, 0.12);
+	border: 1px solid rgba(22, 119, 255, 0.35);
+	border-radius: 6px;
+	color: #1677ff;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+/* ── DnD drag preview ───────────────────────────────────────────── */
+.rbc-addons-dnd-drag-preview {
+	opacity: 0.75;
+	border-radius: 6px;
+}
+
+.rbc-addons-dnd-resizable-month-event,
+.rbc-addons-dnd-resizable {
+	border-radius: 6px;
+}
+
+/* ── Agenda view ────────────────────────────────────────────────── */
+.rbc-agenda-view table.rbc-agenda-table {
+	border: none;
+	font-size: 13px;
+}
+
+.rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+	padding: 8px 12px;
+	font-weight: 600;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: #8c8c8c;
+	background: #fafafa;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+	padding: 8px 12px;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr:hover {
+	background: rgba(22, 119, 255, 0.02);
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+.rbc-time-content::-webkit-scrollbar {
+	width: 6px;
+}
+
+.rbc-time-content::-webkit-scrollbar-track {
+	background: #fafafa;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb {
+	background: #d9d9d9;
+	border-radius: 3px;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb:hover {
+	background: #bfbfbf;
+}
+
+/* ── Sidebar mini calendar — full width, no borders ────────────── */
+.ant-picker-calendar-mini {
+	width: 100% !important;
+	border: none !important;
+	border-radius: 0 !important;
+}
+
+.ant-picker-calendar-mini .ant-picker-panel {
+	border: none !important;
+	border-radius: 0 !important;
+	width: 100% !important;
+}
+
+.ant-picker-calendar-mini .ant-picker-content {
+	width: 100% !important;
+}
+
+.ant-picker-calendar-mini .ant-picker-calendar-header {
+	padding: 8px 12px !important;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-picker-calendar-mode-switch {
+	display: none !important;
+}
+
+.ant-layout {
+	height: 100% !important;
+	min-height: 100% !important;
+}
+
+.ant-layout-sider {
+	height: 100% !important;
+}
+
+/* ── Remove calendar container padding and border ───────────────── */
+#h-bricks-admin-root .rbc-calendar {
+	border: none !important;
+}
+
+#h-bricks-admin-root .rbc-time-view,
+#h-bricks-admin-root .rbc-month-view,
+#h-bricks-admin-root .rbc-agenda-view {
+	border: none !important;
+	padding: 0 !important;
+}
+
+#h-bricks-admin-root .rbc-time-view .rbc-time-content,
+#h-bricks-admin-root .rbc-time-view .rbc-time-header {
+	border-left: none !important;
+	border-right: none !important;
+}
+
+#h-bricks-admin-root .rbc-agenda-view table.rbc-agenda-table {
+	border: none !important;
+}
+
+/* ── Dark mode calendar ─────────────────────────────────────────── */
+[data-theme="dark"] .rbc-time-view .rbc-header,
+[data-theme="dark"] .rbc-month-view .rbc-header {
+	background: #1f1f1f;
+	color: #595959;
+	border-bottom-color: #303030;
+}
+
+[data-theme="dark"] .rbc-time-view,
+[data-theme="dark"] .rbc-month-view,
+[data-theme="dark"] .rbc-agenda-view {
+	background: #141414;
+}
+
+[data-theme="dark"] .rbc-timeslot-group {
+	border-bottom-color: #303030;
+}
+
+[data-theme="dark"] .rbc-time-slot {
+	border-top-color: #262626;
+}
+
+[data-theme="dark"] .rbc-time-content {
+	border-top-color: #303030;
+}
+
+[data-theme="dark"] .rbc-time-content > * + * > * {
+	border-left-color: #303030;
+}
+
+[data-theme="dark"] .rbc-today {
+	background-color: rgba(22, 119, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .rbc-off-range-bg {
+	background: #1a1a1a;
+}
+
+[data-theme="dark"] .rbc-month-row {
+	border-bottom-color: #303030;
+}
+
+[data-theme="dark"] .rbc-day-bg + .rbc-day-bg {
+	border-left-color: #303030;
+}
+
+[data-theme="dark"] .rbc-time-gutter .rbc-time-slot {
+	color: #434343;
+}
+
+[data-theme="dark"] .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+	background: #1f1f1f;
+	color: #595959;
+	border-bottom-color: #303030;
+}
+
+[data-theme="dark"] .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+	border-bottom-color: #303030;
+	color: #d9d9d9;
+}
+
+[data-theme="dark"] .rbc-agenda-view table.rbc-agenda-table tbody > tr:hover {
+	background: rgba(22, 119, 255, 0.05);
+}
+
+/* ── Gray day header background (light + dark) ──────────────────── */
+.rbc-time-view .rbc-header,
+.rbc-month-view .rbc-header {
+	background: #f5f5f5;
+}
+
+.rbc-time-view .rbc-time-header-content,
+.rbc-time-view .rbc-time-header {
+	background: #f5f5f5;
+}
+
+[data-theme="dark"] .rbc-time-view .rbc-time-header-content,
+[data-theme="dark"] .rbc-time-view .rbc-time-header {
+	background: #1f1f1f;
+}
+
+.ant-picker-calendar-mini .ant-picker-calendar-header {
+	border-bottom-color: #f0f0f0 !important;
+}
+
+[data-theme="dark"] .ant-picker-calendar-mini .ant-picker-calendar-header {
+	border-bottom-color: #303030 !important;
+}
