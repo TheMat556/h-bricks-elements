@@ -2,6 +2,8 @@ import { createCache, StyleProvider } from "@ant-design/cssinjs";
 import {
 	CalendarOutlined,
 	ClockCircleOutlined,
+	FileAddOutlined,
+	InboxOutlined,
 	LayoutOutlined,
 	LeftOutlined,
 	MenuFoldOutlined,
@@ -10,37 +12,57 @@ import {
 	RightOutlined,
 	SettingOutlined,
 } from "@ant-design/icons";
-import type { MenuProps } from "antd";
 import {
+	Alert,
 	Button,
 	Calendar,
 	ConfigProvider,
 	Divider,
 	Flex,
 	Grid,
-	Layout,
-	Menu,
+	Input,
+	Modal,
 	Tooltip,
 	Typography,
 	theme,
 } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	CalendarSettingsPanel,
+	createDefaultCalendarSettings,
+	type CalendarSettings,
+} from "./CalendarSettingsPanel";
 import { BookingView, type ViewOption } from "./BookingView";
 
-const { Sider, Content, Header } = Layout;
 const { useBreakpoint } = Grid;
 const THEME_STORAGE_KEY = "wp-react-ui-theme";
 const THEME_CHANGE_EVENT = "wp-react-ui-theme-change";
 
 type AdminTheme = "light" | "dark";
+type AdminViewKey = "booking" | "settings";
 
-// ── Window extension ──────────────────────────────────────────────
+interface AdminCalendar {
+	id: number;
+	title: string;
+	slug: string;
+	icon?: string;
+}
+
+interface CalendarSettingsResponse {
+	item: AdminCalendar;
+	settings: CalendarSettings;
+}
+
 interface HBricksWindow {
 	hBricksAdmin?: {
 		theme?: AdminTheme;
+		initialCalendars?: AdminCalendar[];
+		selectedCalendarId?: number;
+		restUrl?: string;
+		restNonce?: string;
 	};
 	__hBricksNewBooking?: () => void;
 }
@@ -75,8 +97,26 @@ function getInitialTheme(): AdminTheme {
 	if (storedTheme) {
 		return storedTheme;
 	}
+
 	const serverTheme = window.hBricksAdmin?.theme;
 	return isAdminTheme(serverTheme) ? serverTheme : "light";
+}
+
+function getInitialCalendars(): AdminCalendar[] {
+	return window.hBricksAdmin?.initialCalendars ?? [];
+}
+
+function getInitialSelectedCalendarId(calendars: AdminCalendar[]): number {
+	const selectedId = window.hBricksAdmin?.selectedCalendarId;
+
+	if (
+		typeof selectedId === "number" &&
+		calendars.some((calendar) => calendar.id === selectedId)
+	) {
+		return selectedId;
+	}
+
+	return calendars[0]?.id ?? 0;
 }
 
 function applyThemeToDOM(themeMode: AdminTheme) {
@@ -88,28 +128,140 @@ function applyThemeToDOM(themeMode: AdminTheme) {
 		?.setAttribute("data-theme", themeMode);
 }
 
-// ── Menu items ────────────────────────────────────────────────────
-function useMenuItems(collapsed: boolean): MenuProps["items"] {
-	return useMemo(
-		() => [
-			{
-				key: "booking",
-				icon: <CalendarOutlined />,
-				label: collapsed ? null : "Booking",
-				title: "Booking",
-			},
-			{
-				key: "settings",
-				icon: <SettingOutlined />,
-				label: collapsed ? null : "Settings",
-				title: "Settings",
-			},
-		],
-		[collapsed],
-	);
+function getAdminApiConfig() {
+	const rootElement = document.getElementById("h-bricks-admin-root");
+	const rootDatasetUrl = rootElement?.getAttribute("data-rest-url") ?? "";
+	const rootDatasetNonce = rootElement?.getAttribute("data-rest-nonce") ?? "";
+	const inferredBase = window.location.pathname.split("/wp-admin/")[0] ?? "";
+	const inferredRestUrl = `${window.location.origin}${inferredBase}/wp-json/hbe/v1/`;
+
+	return {
+		restUrl:
+			window.hBricksAdmin?.restUrl || rootDatasetUrl || inferredRestUrl,
+		restNonce: window.hBricksAdmin?.restNonce || rootDatasetNonce || "",
+	};
 }
 
-// ── Logo ──────────────────────────────────────────────────────────
+async function createCalendarRequest(title: string): Promise<AdminCalendar> {
+	const { restUrl, restNonce } = getAdminApiConfig();
+
+	if (!restUrl) {
+		throw new Error("REST URL missing.");
+	}
+
+	const response = await fetch(`${restUrl}admin/calendars`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"X-WP-Nonce": restNonce,
+		},
+		body: JSON.stringify({ title }),
+	});
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		throw new Error(
+			typeof data?.message === "string"
+				? data.message
+				: "Calendar could not be created.",
+		);
+	}
+
+	return data.item as AdminCalendar;
+}
+
+async function fetchCalendarsRequest(): Promise<AdminCalendar[]> {
+	const { restUrl, restNonce } = getAdminApiConfig();
+
+	const response = await fetch(`${restUrl}admin/calendars`, {
+		method: "GET",
+		headers: {
+			"X-WP-Nonce": restNonce,
+		},
+	});
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		throw new Error(
+			typeof data?.message === "string"
+				? data.message
+				: "Calendars could not be loaded.",
+		);
+	}
+
+	return Array.isArray(data?.items) ? (data.items as AdminCalendar[]) : [];
+}
+
+async function fetchCalendarSettingsRequest(
+	calendarId: number,
+): Promise<CalendarSettingsResponse> {
+	const { restUrl, restNonce } = getAdminApiConfig();
+	const response = await fetch(`${restUrl}admin/calendars/${calendarId}/settings`, {
+		method: "GET",
+		headers: {
+			"X-WP-Nonce": restNonce,
+		},
+	});
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		throw new Error(
+			typeof data?.message === "string"
+				? data.message
+				: "Settings could not be loaded.",
+		);
+	}
+
+	return {
+		item: (data?.item as AdminCalendar) ?? {
+			id: calendarId,
+			title: "Calendar",
+			slug: "",
+		},
+		settings:
+			(data?.settings as CalendarSettings) ?? createDefaultCalendarSettings(),
+	};
+}
+
+async function saveCalendarSettingsRequest(
+	calendarId: number,
+	settings: CalendarSettings,
+	title: string,
+): Promise<CalendarSettingsResponse> {
+	const { restUrl, restNonce } = getAdminApiConfig();
+	const response = await fetch(`${restUrl}admin/calendars/${calendarId}/settings`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"X-WP-Nonce": restNonce,
+		},
+		body: JSON.stringify({ settings, title }),
+	});
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		throw new Error(
+			typeof data?.message === "string"
+				? data.message
+				: "Settings could not be saved.",
+		);
+	}
+
+	return {
+		item: (data?.item as AdminCalendar) ?? {
+			id: calendarId,
+			title: "Calendar",
+			slug: "",
+		},
+		settings:
+			(data?.settings as CalendarSettings) ?? createDefaultCalendarSettings(),
+	};
+}
+
 function Logo({
 	collapsed,
 	onToggle,
@@ -126,6 +278,7 @@ function Logo({
 			style={{
 				height: 48,
 				borderBottom: `1px solid ${token.colorBorderSecondary}`,
+				background: token.colorBgContainer,
 				paddingLeft: collapsed ? 0 : 10,
 				transition: "padding 0.2s",
 				flexShrink: 0,
@@ -151,42 +304,87 @@ function Logo({
 	);
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────
+function EmptyCalendarState({
+	title,
+	description,
+}: {
+	title: string;
+	description: string;
+}) {
+	const { token } = theme.useToken();
+
+	return (
+		<Flex
+			vertical
+			align="center"
+			justify="center"
+			gap={12}
+			style={{
+				height: "100%",
+				padding: 24,
+				textAlign: "center",
+			}}
+		>
+			<InboxOutlined
+				style={{
+					fontSize: 52,
+					color: token.colorTextQuaternary,
+				}}
+			/>
+			<Typography.Title level={4} style={{ margin: 0 }}>
+				{title}
+			</Typography.Title>
+			<Typography.Text type="secondary" style={{ maxWidth: 360 }}>
+				{description}
+			</Typography.Text>
+		</Flex>
+	);
+}
+
 function Sidebar({
 	collapsed,
 	isDark,
 	activeKey,
+	calendars,
 	calendarDate,
+	hasCalendars,
+	selectedCalendarId,
 	onToggle,
-	onSelect,
+	onViewChange,
+	onCreateCalendar,
+	onCalendarChange,
 	onCalendarSelect,
 }: {
 	collapsed: boolean;
 	isDark: boolean;
-	activeKey: string;
+	activeKey: AdminViewKey;
+	calendars: AdminCalendar[];
 	calendarDate: Dayjs;
+	hasCalendars: boolean;
+	selectedCalendarId: number;
 	onToggle: () => void;
-	onSelect: (key: string) => void;
+	onViewChange: (key: AdminViewKey) => void;
+	onCreateCalendar: () => void;
+	onCalendarChange: (calendarId: number) => void;
 	onCalendarSelect: (date: Dayjs) => void;
 }) {
 	const { token } = theme.useToken();
-	const menuItems = useMenuItems(collapsed);
+	const sidebarWidth = collapsed ? 64 : 220;
 
 	return (
-		<Sider
-			theme={isDark ? "dark" : "light"}
-			collapsible
-			collapsed={collapsed}
-			trigger={null}
-			width={220}
-			collapsedWidth={64}
+		<div
 			style={{
+				width: sidebarWidth,
+				minWidth: sidebarWidth,
+				maxWidth: sidebarWidth,
+				height: "100%",
+				transition:
+					"width 0.24s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1)",
 				borderRight: `1px solid ${token.colorBorderSecondary}`,
 				background: token.colorBgContainer,
-				position: "sticky",
-				top: 0,
-				height: "100vh",
-				overflow: "hidden",
+				alignSelf: "stretch",
+				overflowX: "hidden",
+				overflowY: "auto",
 				flexShrink: 0,
 			}}
 		>
@@ -196,34 +394,95 @@ function Sidebar({
 			>
 				<Logo collapsed={collapsed} onToggle={onToggle} />
 
-				<Menu
-					mode="inline"
-					selectedKeys={[activeKey]}
-					items={menuItems}
-					inlineCollapsed={collapsed}
-					onClick={({ key }) => onSelect(key)}
-					style={{ borderRight: 0, padding: 8 }}
-				/>
+				<div style={{ padding: collapsed ? 8 : 12 }}>
+					<Flex vertical gap={8}>
+						<Tooltip title={collapsed ? "Calendar" : ""} placement="right">
+							<Button
+								type={activeKey === "booking" ? "primary" : "default"}
+								icon={<CalendarOutlined />}
+								block
+								disabled={!hasCalendars}
+								onClick={() => onViewChange("booking")}
+							>
+								{!collapsed && "Calendar"}
+							</Button>
+						</Tooltip>
+						<Tooltip title={collapsed ? "Settings" : ""} placement="right">
+							<Button
+								type={activeKey === "settings" ? "primary" : "default"}
+								icon={<SettingOutlined />}
+								block
+								disabled={!hasCalendars}
+								onClick={() => onViewChange("settings")}
+							>
+								{!collapsed && "Settings"}
+							</Button>
+						</Tooltip>
+					</Flex>
+				</div>
 
-				{/* Spacer */}
+				{!collapsed && hasCalendars && (
+					<div style={{ padding: "4px 12px 12px" }}>
+						<Typography.Text
+							type="secondary"
+							strong
+							style={{
+								display: "block",
+								fontSize: 11,
+								letterSpacing: 0.6,
+								textTransform: "uppercase",
+								marginBottom: 10,
+							}}
+						>
+							Calendars
+						</Typography.Text>
+
+						<Flex vertical gap={6}>
+							{calendars.map((calendar) => {
+								const isActive = calendar.id === selectedCalendarId;
+
+								return (
+									<Button
+										key={calendar.id}
+										type={isActive ? "primary" : "text"}
+										icon={
+											calendar.icon ? (
+												<span aria-hidden="true">{calendar.icon}</span>
+											) : (
+												<CalendarOutlined />
+											)
+										}
+										block
+										style={{
+											justifyContent: "flex-start",
+											fontWeight: isActive ? 600 : 500,
+										}}
+										onClick={() => onCalendarChange(calendar.id)}
+									>
+										{calendar.title}
+									</Button>
+								);
+							})}
+						</Flex>
+					</div>
+				)}
+
 				<div style={{ flex: 1 }} />
 
-				{/* New Calendar Button */}
 				<div style={{ padding: collapsed ? "0 8px 12px" : "0 12px 12px" }}>
 					<Tooltip title={collapsed ? "New Calendar" : ""} placement="right">
 						<Button
 							type="primary"
 							icon={<PlusOutlined />}
 							block
-							onClick={() => window.__hBricksNewBooking?.()}
+							onClick={onCreateCalendar}
 						>
 							{!collapsed && "New Calendar"}
 						</Button>
 					</Tooltip>
 				</div>
 
-				{/* Mini calendar — hidden when collapsed */}
-				{!collapsed && (
+				{!collapsed && hasCalendars && (
 					<>
 						<Divider style={{ margin: 0 }} />
 						<ConfigProvider theme={{ token: { fontSize: 11, fontSizeSM: 10 } }}>
@@ -237,56 +496,299 @@ function Sidebar({
 					</>
 				)}
 			</Flex>
-		</Sider>
+		</div>
 	);
 }
 
-// ── App ───────────────────────────────────────────────────────────
 function App({ themeMode }: { themeMode: AdminTheme }) {
 	const screens = useBreakpoint();
+	const initialCalendars = useMemo(() => getInitialCalendars(), []);
 
-	// md = ≥768px, sm = ≥576px
-	const isSmall = !screens.md; // < 768px → auto-collapse sidebar
-	const isTiny = !screens.sm; // < 576px → hide label + panel button
+	const isSmall = screens.md === false;
+	const isTiny = screens.sm === false;
 
-	const [activeKey, setActiveKey] = useState("booking");
-	const [collapsedManual, setCollapsedManual] = useState(false);
+	const [activeKey, setActiveKey] = useState<AdminViewKey>("booking");
+	const [collapsedManual, setCollapsedManual] = useState<boolean | null>(null);
 	const [rightPanelVisible, setRightPanelVisible] = useState(true);
+	const [calendars, setCalendars] = useState<AdminCalendar[]>(initialCalendars);
+	const [selectedCalendarId, setSelectedCalendarId] = useState<number>(() =>
+		getInitialSelectedCalendarId(initialCalendars),
+	);
 	const [calendarDate, setCalendarDate] = useState<Dayjs>(dayjs());
 	const [view, setView] = useState<ViewOption>("week");
 	const [use24h, setUse24h] = useState(true);
+	const [createModalOpen, setCreateModalOpen] = useState(false);
+	const [newCalendarTitle, setNewCalendarTitle] = useState("");
+	const [createCalendarPending, setCreateCalendarPending] = useState(false);
+	const [createCalendarError, setCreateCalendarError] = useState("");
+	const [calendarLoadError, setCalendarLoadError] = useState("");
+	const [calendarSettings, setCalendarSettings] = useState<CalendarSettings | null>(
+		null,
+	);
+	const [calendarTitleDraft, setCalendarTitleDraft] = useState("");
+	const [settingsLoading, setSettingsLoading] = useState(false);
+	const [settingsSaving, setSettingsSaving] = useState(false);
+	const [settingsError, setSettingsError] = useState("");
+	const [settingsDirty, setSettingsDirty] = useState(false);
 	const { token } = theme.useToken();
 	const isDark = themeMode === "dark";
+	const hasCalendars = calendars.length > 0;
+	const selectedCalendar = calendars.find(
+		(calendar) => calendar.id === selectedCalendarId,
+	);
 
-	// Sidebar is collapsed when the user toggled it OR the screen is small.
-	const collapsed = collapsedManual || isSmall;
+	const collapsed = collapsedManual ?? isSmall;
 
-	// When screen grows back to md, un-force the collapse so the user's
-	// manual preference is restored.
 	useEffect(() => {
-		if (!isSmall) setCollapsedManual((prev) => prev);
+		setCollapsedManual((current) => {
+			if (current === null) {
+				return isSmall;
+			}
+
+			return current;
+		});
 	}, [isSmall]);
 
-	// Switch to "day" view on tiny screens — week/month are too cramped.
 	useEffect(() => {
 		if (isTiny && (view === "week" || view === "month")) {
 			setView("day");
 		}
 	}, [isTiny, view]);
 
+	useEffect(() => {
+		if (!hasCalendars) {
+			setRightPanelVisible(false);
+			setSelectedCalendarId(0);
+			setCalendarSettings(null);
+			setCalendarTitleDraft("");
+			setSettingsDirty(false);
+			return;
+		}
+
+		setSelectedCalendarId((currentId) => {
+			if (calendars.some((calendar) => calendar.id === currentId)) {
+				return currentId;
+			}
+
+			return calendars[0]?.id ?? 0;
+		});
+	}, [calendars, hasCalendars]);
+
+	useEffect(() => {
+		if (hasCalendars && selectedCalendarId === 0) {
+			setActiveKey("booking");
+		}
+	}, [hasCalendars, selectedCalendarId]);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		void fetchCalendarsRequest()
+			.then((items) => {
+				if (!isMounted) {
+					return;
+				}
+
+				setCalendars(items);
+				setCalendarLoadError("");
+			})
+			.catch((error) => {
+				if (!isMounted) {
+					return;
+				}
+
+				setCalendarLoadError(
+					error instanceof Error
+						? error.message
+						: "Calendars could not be loaded.",
+				);
+			});
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!hasCalendars || selectedCalendarId === 0) {
+			setCalendarSettings(null);
+			setSettingsLoading(false);
+			setSettingsDirty(false);
+			return;
+		}
+
+		let isMounted = true;
+
+		setSettingsLoading(true);
+		setSettingsError("");
+
+		void fetchCalendarSettingsRequest(selectedCalendarId)
+			.then(({ item, settings: nextSettings }) => {
+				if (!isMounted) {
+					return;
+				}
+
+				setCalendars((currentCalendars) =>
+					currentCalendars.map((calendar) =>
+						calendar.id === item.id ? { ...calendar, ...item } : calendar,
+					),
+				);
+				setCalendarTitleDraft(item.title);
+				setCalendarSettings(nextSettings);
+				setSettingsDirty(false);
+			})
+			.catch((error) => {
+				if (!isMounted) {
+					return;
+				}
+
+				setCalendarTitleDraft(selectedCalendar?.title ?? "");
+				setCalendarSettings(createDefaultCalendarSettings());
+				setSettingsError(
+					error instanceof Error
+						? error.message
+						: "Settings could not be loaded.",
+				);
+			})
+			.finally(() => {
+				if (isMounted) {
+					setSettingsLoading(false);
+				}
+			});
+
+		return () => {
+			isMounted = false;
+		};
+	}, [hasCalendars, selectedCalendar?.title, selectedCalendarId]);
+
 	const handleNavigate = useCallback(
 		(direction: "prev" | "next" | "today") => {
-			setCalendarDate((d) => {
+			if (!hasCalendars) {
+				return;
+			}
+
+			setCalendarDate((dateValue) => {
 				if (direction === "today") return dayjs();
+
 				const unit =
 					view === "month" ? "month" : view === "week" ? "week" : "day";
-				return direction === "prev" ? d.subtract(1, unit) : d.add(1, unit);
+
+				return direction === "prev"
+					? dateValue.subtract(1, unit)
+					: dateValue.add(1, unit);
 			});
 		},
-		[view],
+		[hasCalendars, view],
 	);
 
+	const handleOpenCreateModal = useCallback(() => {
+		setCreateCalendarError("");
+		setCreateModalOpen(true);
+	}, []);
+
+	const handleCloseCreateModal = useCallback(() => {
+		if (createCalendarPending) {
+			return;
+		}
+
+		setCreateModalOpen(false);
+		setNewCalendarTitle("");
+		setCreateCalendarError("");
+	}, [createCalendarPending]);
+
+	const handleCreateCalendar = useCallback(async () => {
+		const title = newCalendarTitle.trim();
+
+		if (!title || createCalendarPending) {
+			return;
+		}
+
+		setCreateCalendarPending(true);
+		setCreateCalendarError("");
+
+		try {
+			const nextCalendar = await createCalendarRequest(title);
+			setCalendars((currentCalendars) => [...currentCalendars, nextCalendar]);
+			setSelectedCalendarId(nextCalendar.id);
+			setActiveKey("booking");
+			setRightPanelVisible(true);
+			setCalendarDate(dayjs());
+			setCalendarTitleDraft(nextCalendar.title);
+			setCalendarSettings(createDefaultCalendarSettings());
+			setSettingsDirty(false);
+			setSettingsError("");
+			setCreateModalOpen(false);
+			setNewCalendarTitle("");
+		} catch (error) {
+			setCreateCalendarError(
+				error instanceof Error
+					? error.message
+					: "Calendar could not be created.",
+			);
+		} finally {
+			setCreateCalendarPending(false);
+		}
+	}, [createCalendarPending, newCalendarTitle]);
+
+	const handleSettingsChange = useCallback((nextSettings: CalendarSettings) => {
+		setCalendarSettings(nextSettings);
+		setSettingsDirty(true);
+		setSettingsError("");
+	}, []);
+
+	const handleCalendarTitleChange = useCallback((nextTitle: string) => {
+		setCalendarTitleDraft(nextTitle);
+		setSettingsDirty(true);
+		setSettingsError("");
+	}, []);
+
+	const handleSaveSettings = useCallback(async () => {
+		if (!calendarSettings || !selectedCalendarId || settingsSaving) {
+			return;
+		}
+
+		const trimmedTitle = calendarTitleDraft.trim();
+
+		if (!trimmedTitle) {
+			setSettingsError("Calendar name is required.");
+			return;
+		}
+
+		setSettingsSaving(true);
+		setSettingsError("");
+
+		try {
+			const response = await saveCalendarSettingsRequest(
+				selectedCalendarId,
+				calendarSettings,
+				trimmedTitle,
+			);
+			setCalendars((currentCalendars) =>
+				currentCalendars.map((calendar) =>
+					calendar.id === response.item.id
+						? { ...calendar, ...response.item }
+						: calendar,
+				),
+			);
+			setCalendarTitleDraft(response.item.title);
+			setCalendarSettings(response.settings);
+			setSettingsDirty(false);
+		} catch (error) {
+			setSettingsError(
+				error instanceof Error
+					? error.message
+					: "Settings could not be saved.",
+			);
+		} finally {
+			setSettingsSaving(false);
+		}
+	}, [calendarSettings, calendarTitleDraft, selectedCalendarId, settingsSaving]);
+
 	const headerLabel = (() => {
+		if (!hasCalendars || !selectedCalendar) {
+			return "No calendar created";
+		}
+
 		if (view === "week") {
 			const start = calendarDate.startOf("isoWeek");
 			const end = calendarDate.endOf("isoWeek");
@@ -294,33 +796,62 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 				? `${start.format("MMM D")} – ${end.format("D")}`
 				: `${start.format("MMM D")} – ${end.format("D, YYYY")}`;
 		}
-		if (view === "day")
-			return calendarDate.format(isSmall ? "ddd, MMM D" : "dddd, MMM D, YYYY");
-		if (view === "month") return calendarDate.format("MMMM YYYY");
+
+		if (view === "day") {
+			return calendarDate.format(
+				isSmall ? "ddd, MMM D" : "dddd, MMM D, YYYY",
+			);
+		}
+
+		if (view === "month") {
+			return calendarDate.format("MMMM YYYY");
+		}
+
 		return "Agenda";
 	})();
 
 	return (
-		<Layout style={{ minHeight: "100vh" }}>
+		<div
+			style={{
+				display: "flex",
+				height: "100%",
+				overflow: "hidden",
+				alignItems: "stretch",
+			}}
+		>
 			<Sidebar
 				collapsed={collapsed}
 				isDark={isDark}
 				activeKey={activeKey}
+				calendars={calendars}
 				calendarDate={calendarDate}
-				onToggle={() => setCollapsedManual((c) => !c)}
-				onSelect={setActiveKey}
+				hasCalendars={hasCalendars}
+				selectedCalendarId={selectedCalendarId}
+				onToggle={() =>
+					setCollapsedManual((current) => !(current ?? isSmall))
+				}
+				onViewChange={setActiveKey}
+				onCreateCalendar={handleOpenCreateModal}
+				onCalendarChange={setSelectedCalendarId}
 				onCalendarSelect={setCalendarDate}
 			/>
 
-			<Layout>
-				<Header
+			<div
+				style={{
+					display: "flex",
+					flex: 1,
+					flexDirection: "column",
+					minWidth: 0,
+					height: "100%",
+					minHeight: 0,
+					overflow: "hidden",
+				}}
+			>
+				<div
 					style={{
 						background: token.colorBgContainer,
 						borderBottom: `1px solid ${token.colorBorderSecondary}`,
 						padding: "0 16px",
-						position: "sticky",
-						top: 0,
-						zIndex: 10,
 						height: 48,
 					}}
 				>
@@ -330,7 +861,6 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 						gap={12}
 						style={{ height: "100%" }}
 					>
-						{/* Left: nav + label */}
 						<Flex
 							align="center"
 							gap={8}
@@ -339,11 +869,13 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 							<Button.Group size="small">
 								<Button
 									icon={<LeftOutlined />}
+									disabled={!hasCalendars}
 									onClick={() => handleNavigate("prev")}
 								/>
 								{!isTiny && (
 									<Button
 										style={{ fontWeight: 600, minWidth: 56 }}
+										disabled={!hasCalendars}
 										onClick={() => handleNavigate("today")}
 									>
 										Today
@@ -351,6 +883,7 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 								)}
 								<Button
 									icon={<RightOutlined />}
+									disabled={!hasCalendars}
 									onClick={() => handleNavigate("next")}
 								/>
 							</Button.Group>
@@ -362,28 +895,27 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 							)}
 						</Flex>
 
-						{/* Center: view switcher */}
 						{activeKey === "booking" && (
 							<Flex align="center" gap={4} style={{ flexShrink: 0 }}>
 								{(["month", "week", "day", "agenda"] as ViewOption[])
-									.filter((v) => !isTiny || v === "day" || v === "agenda")
-									.map((v) => (
+									.filter((option) => !isTiny || option === "day" || option === "agenda")
+									.map((option) => (
 										<Button
-											key={v}
+											key={option}
 											size="small"
-											type={view === v ? "primary" : "default"}
-											onClick={() => setView(v)}
-											style={{ fontWeight: view === v ? 700 : 500 }}
+											type={view === option ? "primary" : "default"}
+											disabled={!hasCalendars}
+											onClick={() => setView(option)}
+											style={{ fontWeight: view === option ? 700 : 500 }}
 										>
 											{isSmall
-												? v.charAt(0).toUpperCase()
-												: v.charAt(0).toUpperCase() + v.slice(1)}
+												? option.charAt(0).toUpperCase()
+												: option.charAt(0).toUpperCase() + option.slice(1)}
 										</Button>
 									))}
 							</Flex>
 						)}
 
-						{/* Right: actions */}
 						{activeKey === "booking" && (
 							<Flex align="center" gap={6} style={{ flexShrink: 0 }}>
 								{!isSmall && (
@@ -395,7 +927,8 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 												size="small"
 												type="text"
 												icon={<ClockCircleOutlined />}
-												onClick={() => setUse24h((v) => !v)}
+												disabled={!hasCalendars}
+												onClick={() => setUse24h((current) => !current)}
 											>
 												{use24h ? "24h" : "12h"}
 											</Button>
@@ -404,7 +937,8 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 											size="small"
 											type="text"
 											icon={<LayoutOutlined />}
-											onClick={() => setRightPanelVisible((v) => !v)}
+											disabled={!hasCalendars}
+											onClick={() => setRightPanelVisible((current) => !current)}
 											style={{
 												color: rightPanelVisible
 													? token.colorPrimary
@@ -418,25 +952,28 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 								<Button
 									size="small"
 									type="primary"
-									icon={<PlusOutlined />}
+									icon={<FileAddOutlined />}
+									disabled={!hasCalendars}
 									onClick={() => window.__hBricksNewBooking?.()}
 								>
-									{!isTiny && "New"}
+									{!isTiny && "New Booking"}
 								</Button>
 							</Flex>
 						)}
 					</Flex>
-				</Header>
+				</div>
 
-				<Content
+				<div
 					style={{
 						background: token.colorBgLayout,
-						overflow: "hidden",
-						height: "calc(100vh - 48px)",
+						overflow: "auto",
+						flex: 1,
+						minHeight: 0,
 					}}
 				>
-					{activeKey === "booking" && (
+					{activeKey === "booking" && hasCalendars && (
 						<BookingView
+							calendarId={selectedCalendarId}
 							rightPanelVisible={isSmall ? false : rightPanelVisible}
 							selectedDate={calendarDate}
 							view={view}
@@ -445,17 +982,74 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 							onNavigate={setCalendarDate}
 						/>
 					)}
-					{activeKey === "settings" && (
-						<Typography.Text
-							type="secondary"
-							style={{ padding: 24, display: "block" }}
-						>
-							Settings content here.
-						</Typography.Text>
+
+					{activeKey === "booking" && !hasCalendars && (
+						<EmptyCalendarState
+							title="No calendar created"
+							description={
+								calendarLoadError ||
+								"Create your first calendar to unlock the booking view, date navigation and calendar-related controls."
+							}
+						/>
 					)}
-				</Content>
-			</Layout>
-		</Layout>
+
+					{activeKey === "settings" &&
+						(hasCalendars ? (
+						<CalendarSettingsPanel
+							calendarName={calendarTitleDraft || selectedCalendar?.title || "Calendar"}
+							settings={calendarSettings}
+							loading={settingsLoading}
+							saving={settingsSaving}
+							error={settingsError}
+							dirty={settingsDirty}
+							onCalendarNameChange={handleCalendarTitleChange}
+							onChange={handleSettingsChange}
+							onSave={handleSaveSettings}
+						/>
+						) : (
+							<EmptyCalendarState
+								title="No calendar created"
+								description={
+									calendarLoadError ||
+									"Create a calendar first. Until then, all calendar-related controls stay disabled."
+								}
+							/>
+						))}
+				</div>
+			</div>
+
+			<Modal
+				title="Create Calendar"
+				open={createModalOpen}
+				okText="Create"
+				okButtonProps={{
+					disabled: newCalendarTitle.trim().length === 0,
+					loading: createCalendarPending,
+				}}
+				onOk={handleCreateCalendar}
+				onCancel={handleCloseCreateModal}
+				cancelButtonProps={{ disabled: createCalendarPending }}
+			>
+				<Flex vertical gap={8} style={{ marginTop: 12 }}>
+					<Typography.Text type="secondary">
+						Enter a name for the new calendar.
+					</Typography.Text>
+					{createCalendarError && (
+						<Alert type="error" showIcon message={createCalendarError} />
+					)}
+					<Input
+						autoFocus
+						placeholder="Calendar name"
+						value={newCalendarTitle}
+						disabled={createCalendarPending}
+						onChange={(event) => setNewCalendarTitle(event.target.value)}
+						onPressEnter={() => {
+							void handleCreateCalendar();
+						}}
+					/>
+				</Flex>
+			</Modal>
+		</div>
 	);
 }
 
@@ -477,6 +1071,7 @@ export function SettingsApp() {
 			}
 			setThemeMode(event.newValue);
 		};
+
 		window.addEventListener("storage", handleStorage);
 		return () => window.removeEventListener("storage", handleStorage);
 	}, []);
@@ -488,6 +1083,7 @@ export function SettingsApp() {
 			if (!isAdminTheme(nextTheme)) return;
 			setThemeMode(nextTheme);
 		};
+
 		window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
 		return () =>
 			window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);

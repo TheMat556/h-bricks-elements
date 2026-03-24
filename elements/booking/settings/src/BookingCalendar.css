@@ -1,6 +1,5 @@
 /* ── WP style reset ─────────────────────────────────────────────── */
 #h-bricks-admin-root {
-	all: initial;
 	font-family:
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 14px;
@@ -8,10 +7,10 @@
 	line-height: 1.5;
 	box-sizing: border-box;
 	display: block;
-}
-
-#h-bricks-admin-root {
+	position: relative;
+	isolation: isolate;
 	height: 100%;
+	min-height: 100%;
 }
 
 #h-bricks-admin-root *,
@@ -238,15 +237,6 @@
 
 .ant-picker-calendar-mode-switch {
 	display: none !important;
-}
-
-.ant-layout {
-	height: 100% !important;
-	min-height: 100% !important;
-}
-
-.ant-layout-sider {
-	height: 100% !important;
 }
 
 /* ── Remove calendar container padding and border ───────────────── */
