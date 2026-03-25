@@ -10,6 +10,7 @@ import {
 	MenuUnfoldOutlined,
 	PlusOutlined,
 	RightOutlined,
+	SaveOutlined,
 	SettingOutlined,
 } from "@ant-design/icons";
 import {
@@ -888,11 +889,15 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 								/>
 							</Button.Group>
 
-							{!isTiny && (
-								<Typography.Text strong ellipsis style={{ fontSize: 13 }}>
-									{headerLabel}
-								</Typography.Text>
-							)}
+						{!isTiny && (
+							<Typography.Text strong ellipsis style={{ fontSize: 13 }}>
+								{activeKey === "settings"
+									? selectedCalendar
+										? `${selectedCalendar.icon ? `${selectedCalendar.icon} ` : ""}${selectedCalendar.title}`
+										: "Calendar Settings"
+									: headerLabel}
+							</Typography.Text>
+						)}
 						</Flex>
 
 						{activeKey === "booking" && (
@@ -960,6 +965,36 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 								</Button>
 							</Flex>
 						)}
+
+						{activeKey === "settings" && (
+							<Flex align="center" gap={8} style={{ flexShrink: 0 }}>
+								{!isTiny && hasCalendars && (
+									<Typography.Text
+										type={settingsDirty ? "warning" : "secondary"}
+										style={{ whiteSpace: "nowrap" }}
+									>
+										{settingsDirty ? "Unsaved changes" : "All changes saved"}
+									</Typography.Text>
+								)}
+								<Button
+									size="small"
+									type="primary"
+									icon={<SaveOutlined />}
+									disabled={
+										!hasCalendars ||
+										settingsLoading ||
+										settingsSaving ||
+										!settingsDirty
+									}
+									loading={settingsSaving}
+									onClick={() => {
+										void handleSaveSettings();
+									}}
+								>
+									{!isTiny && "Save Settings"}
+								</Button>
+							</Flex>
+						)}
 					</Flex>
 				</div>
 
@@ -999,12 +1034,9 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 							calendarName={calendarTitleDraft || selectedCalendar?.title || "Calendar"}
 							settings={calendarSettings}
 							loading={settingsLoading}
-							saving={settingsSaving}
 							error={settingsError}
-							dirty={settingsDirty}
 							onCalendarNameChange={handleCalendarTitleChange}
 							onChange={handleSettingsChange}
-							onSave={handleSaveSettings}
 						/>
 						) : (
 							<EmptyCalendarState

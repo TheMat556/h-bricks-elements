@@ -74,6 +74,14 @@ class HBE_Bookings {
 			return $prepared;
 		}
 
+		if ( ! self::is_within_booking_window( $prepared['start_datetime'], $settings ) ) {
+			return new WP_Error(
+				'hbe_booking_outside_window',
+				__( 'This booking is outside the allowed booking window.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		if (
 			empty( $settings['allowDoubleBookings'] ) &&
 			self::has_conflict( $calendar_id, $prepared['start_datetime'], $prepared['end_datetime'] )
@@ -150,6 +158,14 @@ class HBE_Bookings {
 
 		if ( is_wp_error( $prepared ) ) {
 			return $prepared;
+		}
+
+		if ( ! self::is_within_booking_window( $prepared['start_datetime'], $settings ) ) {
+			return new WP_Error(
+				'hbe_booking_outside_window',
+				__( 'This booking is outside the allowed booking window.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		if (
@@ -415,6 +431,38 @@ class HBE_Bookings {
 		}
 
 		return (int) $count > 0;
+	}
+
+	/**
+	 * Checks whether a booking start is within the configured booking window.
+	 *
+	 * @param string              $start_datetime Booking start in UTC mysql format.
+	 * @param array<string,mixed> $settings       Calendar settings.
+	 * @return bool
+	 */
+	private static function is_within_booking_window( string $start_datetime, array $settings ): bool {
+		$max_advance_days = isset( $settings['slotSettings']['maxAdvanceDays'] )
+			? absint( $settings['slotSettings']['maxAdvanceDays'] )
+			: 0;
+
+		if ( $max_advance_days <= 0 ) {
+			return true;
+		}
+
+		$start_timestamp = strtotime( $start_datetime . ' UTC' );
+
+		if ( false === $start_timestamp ) {
+			return false;
+		}
+
+		$today_timestamp        = strtotime( gmdate( 'Y-m-d 00:00:00' ) . ' UTC' );
+		$last_allowed_timestamp = strtotime( '+' . $max_advance_days . ' days', $today_timestamp );
+
+		if ( false === $today_timestamp || false === $last_allowed_timestamp ) {
+			return false;
+		}
+
+		return $start_timestamp <= $last_allowed_timestamp;
 	}
 
 	/**

@@ -2,7 +2,6 @@ import {
 	DeleteOutlined,
 	DownOutlined,
 	PlusOutlined,
-	SaveOutlined,
 	UpOutlined,
 } from "@ant-design/icons";
 import {
@@ -65,6 +64,12 @@ export interface CalendarSettings {
 	icon: string;
 	allowDoubleBookings: boolean;
 	adminOnly: boolean;
+	slotSettings: {
+		sessionDuration: number;
+		prepTime: number;
+		cleanupTime: number;
+		maxAdvanceDays: number;
+	};
 	mailSettings: {
 		enabled: boolean;
 		host: string;
@@ -128,6 +133,12 @@ export function createDefaultCalendarSettings(): CalendarSettings {
 		icon: "",
 		allowDoubleBookings: false,
 		adminOnly: false,
+		slotSettings: {
+			sessionDuration: 60,
+			prepTime: 0,
+			cleanupTime: 0,
+			maxAdvanceDays: 0,
+		},
 		mailSettings: {
 			enabled: false,
 			host: "",
@@ -195,22 +206,16 @@ export function CalendarSettingsPanel({
 	calendarName,
 	settings,
 	loading,
-	saving,
 	error,
-	dirty,
 	onCalendarNameChange,
 	onChange,
-	onSave,
 }: {
 	calendarName: string;
 	settings: CalendarSettings | null;
 	loading: boolean;
-	saving: boolean;
 	error: string;
-	dirty: boolean;
 	onCalendarNameChange: (nextName: string) => void;
 	onChange: (nextSettings: CalendarSettings) => void;
-	onSave: () => void;
 }) {
 	const { token } = theme.useToken();
 	const screens = Grid.useBreakpoint();
@@ -366,6 +371,23 @@ export function CalendarSettingsPanel({
 		});
 	};
 
+	const updateSlotSettings = (
+		patch: Partial<CalendarSettings["slotSettings"]>,
+	) => {
+		onChange({
+			...settings,
+			slotSettings: {
+				...settings.slotSettings,
+				...patch,
+			},
+		});
+	};
+
+	const totalDefaultSlotDuration =
+		settings.slotSettings.sessionDuration +
+		settings.slotSettings.prepTime +
+		settings.slotSettings.cleanupTime;
+
 	return (
 		<div
 			style={{
@@ -376,9 +398,7 @@ export function CalendarSettingsPanel({
 			<Flex vertical gap={16}>
 				<Flex
 					align="center"
-					justify="space-between"
-					wrap="wrap"
-					gap={12}
+					gap={16}
 					style={{
 						background: token.colorBgContainer,
 						border: `1px solid ${token.colorBorderSecondary}`,
@@ -391,23 +411,9 @@ export function CalendarSettingsPanel({
 							{settings.icon ? `${settings.icon} ${calendarName}` : calendarName}
 						</Typography.Title>
 						<Typography.Text type="secondary">
-							Manage working hours, services, booking mode and blocked dates.
+							Manage working hours, services, booking rules and blocked dates.
 						</Typography.Text>
 					</div>
-					<Flex align="center" gap={12}>
-						<Typography.Text type={dirty ? "warning" : "secondary"}>
-							{dirty ? "Unsaved changes" : "All changes saved"}
-						</Typography.Text>
-						<Button
-							type="primary"
-							icon={<SaveOutlined />}
-							loading={saving}
-							disabled={!dirty}
-							onClick={onSave}
-						>
-							Save Settings
-						</Button>
-					</Flex>
 				</Flex>
 
 				{error && <Alert type="error" showIcon message={error} />}
@@ -563,6 +569,70 @@ export function CalendarSettingsPanel({
 								}
 							/>
 						</Flex>
+					</Flex>
+				</Section>
+
+				<Section
+					title="Default Slot Timing"
+					description="Define the base slot footprint and how far ahead customers are allowed to book."
+				>
+					<Flex vertical gap={16}>
+						<Flex gap={12} wrap="wrap">
+							<InputNumber
+								min={1}
+								value={settings.slotSettings.sessionDuration}
+								addonBefore="Session"
+								addonAfter="min"
+								onChange={(value) =>
+									updateSlotSettings({
+										sessionDuration: Number(value ?? 60),
+									})
+								}
+							/>
+							<InputNumber
+								min={0}
+								value={settings.slotSettings.prepTime}
+								addonBefore="Prep"
+								addonAfter="min"
+								onChange={(value) =>
+									updateSlotSettings({
+										prepTime: Number(value ?? 0),
+									})
+								}
+							/>
+							<InputNumber
+								min={0}
+								value={settings.slotSettings.cleanupTime}
+								addonBefore="Cleanup"
+								addonAfter="min"
+								onChange={(value) =>
+									updateSlotSettings({
+										cleanupTime: Number(value ?? 0),
+									})
+								}
+							/>
+							<InputNumber
+								min={0}
+								value={settings.slotSettings.maxAdvanceDays}
+								addonBefore="Book ahead"
+								addonAfter="days"
+								onChange={(value) =>
+									updateSlotSettings({
+										maxAdvanceDays: Number(value ?? 0),
+									})
+								}
+							/>
+						</Flex>
+						<Alert
+							type="info"
+							showIcon
+							message={`Total slot footprint: ${totalDefaultSlotDuration} minutes`}
+							description={
+								settings.slotSettings.maxAdvanceDays > 0
+									? `Customers can book up to ${settings.slotSettings.maxAdvanceDays} day${settings.slotSettings.maxAdvanceDays === 1 ? "" : "s"} ahead.`
+									: "Set “Book ahead” to 0 to allow booking without an advance-day limit."
+							}
+						/>
 					</Flex>
 				</Section>
 

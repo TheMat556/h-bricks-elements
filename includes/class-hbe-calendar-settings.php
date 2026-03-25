@@ -31,6 +31,12 @@ class HBE_Calendar_Settings {
 			'icon'          => '',
 			'allowDoubleBookings' => false,
 			'adminOnly'     => false,
+			'slotSettings'  => array(
+				'sessionDuration' => 60,
+				'prepTime'        => 0,
+				'cleanupTime'     => 0,
+				'maxAdvanceDays'  => 0,
+			),
 			'mailSettings'  => array(
 				'enabled'    => false,
 				'host'       => '',
@@ -162,6 +168,11 @@ class HBE_Calendar_Settings {
 			),
 			'allowDoubleBookings' => ! empty( $settings['allowDoubleBookings'] ),
 			'adminOnly'     => ! empty( $settings['adminOnly'] ),
+			'slotSettings'  => self::sanitize_slot_settings(
+				isset( $settings['slotSettings'] ) && is_array( $settings['slotSettings'] )
+					? $settings['slotSettings']
+					: array()
+			),
 			'mailSettings'  => self::sanitize_mail_settings(
 				isset( $settings['mailSettings'] ) && is_array( $settings['mailSettings'] )
 					? $settings['mailSettings']
@@ -218,6 +229,34 @@ class HBE_Calendar_Settings {
 		return in_array( $selection_mode, array( 'single', 'multi' ), true )
 			? $selection_mode
 			: 'single';
+	}
+
+	/**
+	 * Sanitizes default slot timing settings.
+	 *
+	 * @param array<string,mixed> $slot_settings Raw slot settings.
+	 * @return array<string,int>
+	 */
+	private static function sanitize_slot_settings( array $slot_settings ): array {
+		$defaults = self::get_defaults()['slotSettings'];
+
+		return array(
+			'sessionDuration' => max(
+				1,
+				isset( $slot_settings['sessionDuration'] )
+					? absint( $slot_settings['sessionDuration'] )
+					: (int) $defaults['sessionDuration']
+			),
+			'prepTime'        => isset( $slot_settings['prepTime'] )
+				? absint( $slot_settings['prepTime'] )
+				: (int) $defaults['prepTime'],
+			'cleanupTime'     => isset( $slot_settings['cleanupTime'] )
+				? absint( $slot_settings['cleanupTime'] )
+				: (int) $defaults['cleanupTime'],
+			'maxAdvanceDays'  => isset( $slot_settings['maxAdvanceDays'] )
+				? absint( $slot_settings['maxAdvanceDays'] )
+				: (int) $defaults['maxAdvanceDays'],
+		);
 	}
 
 	/**
