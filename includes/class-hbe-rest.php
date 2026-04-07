@@ -187,6 +187,45 @@ class HBE_REST {
 				),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/public/calendars/(?P<id>\d+)/bookings',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'get_public_calendar_bookings' ),
+					'permission_callback' => '__return_true',
+					'args'                => array(
+						'id'    => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+						'start' => array(
+							'type'     => 'string',
+							'required' => false,
+						),
+						'end'   => array(
+							'type'     => 'string',
+							'required' => false,
+						),
+					),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( __CLASS__, 'create_public_calendar_booking' ),
+					'permission_callback' => '__return_true',
+					'args'                => array(
+						'id' => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -449,6 +488,102 @@ class HBE_REST {
 				'slug'     => $calendar->post_name,
 				'settings' => HBE_Calendar_Settings::get( (int) $calendar->ID ),
 			)
+		);
+	}
+
+	/**
+	 * Returns public bookings for one calendar.
+	 *
+	 * @param WP_REST_Request $request Incoming request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_public_calendar_bookings( WP_REST_Request $request ) {
+		$calendar = self::get_calendar_or_error( absint( $request['id'] ) );
+
+		if ( is_wp_error( $calendar ) ) {
+			return $calendar;
+		}
+
+		$start    = $request->get_param( 'start' );
+		$end      = $request->get_param( 'end' );
+		$bookings = HBE_Bookings::list_for_calendar(
+			(int) $calendar->ID,
+			is_string( $start ) && '' !== $start ? $start : null,
+			is_string( $end ) && '' !== $end ? $end : null
+		);
+
+		if ( is_wp_error( $bookings ) ) {
+			return $bookings;
+		}
+
+		$visible_bookings = array_values(
+			array_filter(
+				$bookings,
+				static function ( $booking ) {
+					return is_array( $booking )
+						&& isset( $booking['status'] )
+						&& 'cancelled' !== $booking['status'];
+				}
+			)
+		);
+
+		return new WP_REST_Response(
+			array(
+				'items' => array_map(
+					static function ( $booking ) {
+						return array(
+							'id'        => isset( $booking['id'] ) ? (int) $booking['id'] : 0,
+							'start'     => isset( $booking['start'] ) ? (string) $booking['start'] : '',
+							'end'       => isset( $booking['end'] ) ? (string) $booking['end'] : '',
+							'status'    => isset( $booking['status'] ) ? (string) $booking['status'] : '',
+							'serviceId' => isset( $booking['serviceId'] ) ? (string) $booking['serviceId'] : '',
+						);
+					},
+					$visible_bookings
+				),
+			)
+		);
+	}
+
+	/**
+	 * Creates a public booking for one calendar.
+	 *
+	 * @param WP_REST_Request $request Incoming request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_public_calendar_booking( WP_REST_Request $request ) {
+		$calendar = self::get_calendar_or_error( absint( $request['id'] ) );
+
+		if ( is_wp_error( $calendar ) ) {
+			return $calendar;
+		}
+
+		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
+
+		if ( ! empty( $settings['adminOnly'] ) ) {
+			return new WP_Error(
+				'hbe_booking_admin_only',
+				__( 'This calendar is not accepting public bookings.', 'h-bricks-elements' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$payload           = self::get_request_payload( $request );
+		$payload['status'] = 'pending';
+		$booking           = HBE_Bookings::create(
+			(int) $calendar->ID,
+			$payload
+		);
+
+		if ( is_wp_error( $booking ) ) {
+			return $booking;
+		}
+
+		return new WP_REST_Response(
+			array(
+				'item' => $booking,
+			),
+			201
 		);
 	}
 

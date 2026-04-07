@@ -240,6 +240,29 @@ function upsertEvent(events: BookingEvent[], nextEvent: BookingEvent): BookingEv
 	]);
 }
 
+function hasBookingConflict(
+	events: BookingEvent[],
+	start: Date,
+	end: Date,
+	excludeEventId?: string,
+): boolean {
+	if (end.getTime() <= start.getTime()) {
+		return false;
+	}
+
+	return events.some((event) => {
+		if (excludeEventId && event.id === excludeEventId) {
+			return false;
+		}
+
+		if (event.status === "cancelled") {
+			return false;
+		}
+
+		return start < event.end && end > event.start;
+	});
+}
+
 function toBookingPayload(values: BookingFormValues): BookingPayload {
 	const start = combineDateAndTime(values.date, values.startTime);
 	const end = combineDateAndTime(values.date, values.endTime);
@@ -540,6 +563,7 @@ function RightPanel({
 
 export function BookingView({
 	calendarId,
+	allowDoubleBookings,
 	rightPanelVisible,
 	selectedDate,
 	view,
@@ -548,6 +572,7 @@ export function BookingView({
 	onNavigate,
 }: {
 	calendarId: number;
+	allowDoubleBookings: boolean;
 	rightPanelVisible: boolean;
 	selectedDate: Dayjs;
 	view: ViewOption;
@@ -603,12 +628,21 @@ export function BookingView({
 
 	const openNewBooking = useCallback(
 		(slot: SlotInfo) => {
+			if (
+				!allowDoubleBookings &&
+				hasBookingConflict(events, slot.start, slot.end)
+			) {
+				setError("This timeslot conflicts with an existing booking.");
+				return;
+			}
+
 			setPendingSlot(slot);
 			setSelectedEvent(null);
 			form.setFieldsValue(buildFormValues(slot.start, slot.end));
 			setModalOpen(true);
+			setError("");
 		},
-		[form],
+		[allowDoubleBookings, events, form],
 	);
 
 	useEffect(() => {
@@ -686,6 +720,14 @@ export function BookingView({
 
 	const persistEvent = useCallback(
 		async (event: BookingEvent, start: Date, end: Date) => {
+			if (
+				!allowDoubleBookings &&
+				hasBookingConflict(events, start, end, event.id)
+			) {
+				setError("This timeslot conflicts with an existing booking.");
+				return;
+			}
+
 			try {
 				const updatedItem = await updateBookingRequest(calendarId, Number(event.id), {
 					title: event.title,
@@ -707,7 +749,7 @@ export function BookingView({
 				void loadBookings();
 			}
 		},
-		[calendarId, loadBookings],
+		[allowDoubleBookings, calendarId, events, loadBookings],
 	);
 
 	const handleEventDrop: withDragAndDropProps<BookingEvent>["onEventDrop"] =
@@ -738,6 +780,28 @@ export function BookingView({
 						errors: ["End time must be after start time."],
 					},
 				]);
+				return;
+			}
+
+			const nextStart = new Date(payload.start);
+			const nextEnd = new Date(payload.end);
+
+			if (
+				!allowDoubleBookings &&
+				hasBookingConflict(
+					events,
+					nextStart,
+					nextEnd,
+					selectedEvent ? selectedEvent.id : undefined,
+				)
+			) {
+				form.setFields([
+					{
+						name: "endTime",
+						errors: ["This timeslot conflicts with an existing booking."],
+					},
+				]);
+				setError("This timeslot conflicts with an existing booking.");
 				return;
 			}
 
@@ -774,7 +838,7 @@ export function BookingView({
 		} finally {
 			setSaving(false);
 		}
-	}, [calendarId, closeModal, form, selectedEvent]);
+	}, [allowDoubleBookings, calendarId, closeModal, events, form, selectedEvent]);
 
 	const handleDelete = useCallback(async () => {
 		if (!selectedEvent) {

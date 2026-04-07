@@ -689,6 +689,7 @@ export function CalendarSettingsPanel({
 													format="HH:mm"
 													minuteStep={15}
 													disabled={!day.enabled}
+													style={{ minWidth: 118 }}
 													value={dayjs(`2000-01-01T${interval.start}:00`)}
 													onChange={(_, value) =>
 														updateWorkingInterval(weekday, index, "start", value)
@@ -699,6 +700,7 @@ export function CalendarSettingsPanel({
 													format="HH:mm"
 													minuteStep={15}
 													disabled={!day.enabled}
+													style={{ minWidth: 118 }}
 													value={dayjs(`2000-01-01T${interval.end}:00`)}
 													onChange={(_, value) =>
 														updateWorkingInterval(weekday, index, "end", value)
@@ -866,6 +868,7 @@ export function CalendarSettingsPanel({
 								>
 									<DatePicker
 										format="YYYY-MM-DD"
+										style={{ minWidth: 148 }}
 										value={exception.date ? dayjs(exception.date) : null}
 										onChange={(_, value) =>
 											updateException(index, { date: value })

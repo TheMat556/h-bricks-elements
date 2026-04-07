@@ -344,6 +344,48 @@
 
 .ant-picker-calendar-mini .ant-picker-calendar-header {
 	border-bottom-color: #f0f0f0 !important;
+	padding: 10px 12px 12px !important;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.ant-picker-calendar-mini .ant-picker-calendar-header .ant-picker-calendar-year-select,
+.ant-picker-calendar-mini .ant-picker-calendar-header .ant-picker-calendar-month-select {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.ant-picker-calendar-mini .ant-picker-calendar-header .ant-select {
+	width: 100%;
+}
+
+.ant-picker-calendar-mini .ant-picker-calendar-header .ant-select-selector {
+	min-height: 34px !important;
+	height: 34px !important;
+	padding-inline: 10px !important;
+	font-size: 12px !important;
+	border-radius: 10px !important;
+}
+
+.ant-picker-calendar-mini
+	.ant-picker-calendar-header
+	.ant-select-single
+	.ant-select-selection-item,
+.ant-picker-calendar-mini
+	.ant-picker-calendar-header
+	.ant-select-single
+	.ant-select-selection-placeholder {
+	line-height: 32px !important;
+}
+
+.ant-picker-calendar-mini .ant-picker-calendar-header .ant-select-arrow {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inset-inline-end: 10px !important;
+	height: 100%;
 }
 
 [data-theme="dark"] .ant-picker-calendar-mini .ant-picker-calendar-header {

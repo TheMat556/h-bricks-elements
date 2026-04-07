@@ -37,6 +37,7 @@ import {
 	type CalendarSettings,
 } from "./CalendarSettingsPanel";
 import { BookingView, type ViewOption } from "./BookingView";
+import "./SettingsApp.css";
 
 const { useBreakpoint } = Grid;
 const THEME_STORAGE_KEY = "wp-react-ui-theme";
@@ -127,6 +128,17 @@ function applyThemeToDOM(themeMode: AdminTheme) {
 	document
 		.getElementById("h-bricks-admin-root")
 		?.setAttribute("data-theme", themeMode);
+}
+
+function applyWordPressScreenMetaButtonFix() {
+	const buttons = document.querySelectorAll<HTMLButtonElement>(
+		'#screen-meta-links .show-settings, button.show-settings[aria-controls="screen-options-wrap"], button.show-settings[aria-controls="contextual-help-wrap"]',
+	);
+
+	buttons.forEach((button) => {
+		button.style.display = "flex";
+		button.style.alignItems = "center";
+	});
 }
 
 function getAdminApiConfig() {
@@ -385,13 +397,17 @@ function Sidebar({
 				background: token.colorBgContainer,
 				alignSelf: "stretch",
 				overflowX: "hidden",
-				overflowY: "auto",
+				overflowY: "hidden",
 				flexShrink: 0,
 			}}
 		>
 			<Flex
 				vertical
-				style={{ height: "100%", background: token.colorBgContainer }}
+				style={{
+					height: "100%",
+					minHeight: 0,
+					background: token.colorBgContainer,
+				}}
 			>
 				<Logo collapsed={collapsed} onToggle={onToggle} />
 
@@ -423,7 +439,14 @@ function Sidebar({
 				</div>
 
 				{!collapsed && hasCalendars && (
-					<div style={{ padding: "4px 12px 12px" }}>
+					<div
+						style={{
+							padding: "4px 12px 12px",
+							flex: 1,
+							minHeight: 0,
+							overflowY: "auto",
+						}}
+					>
 						<Typography.Text
 							type="secondary"
 							strong
@@ -448,7 +471,18 @@ function Sidebar({
 										type={isActive ? "primary" : "text"}
 										icon={
 											calendar.icon ? (
-												<span aria-hidden="true">{calendar.icon}</span>
+												<span
+													aria-hidden="true"
+													style={{
+														display: "inline-flex",
+														alignItems: "center",
+														justifyContent: "center",
+														width: 18,
+														lineHeight: 1,
+													}}
+												>
+													{calendar.icon}
+												</span>
 											) : (
 												<CalendarOutlined />
 											)
@@ -467,8 +501,6 @@ function Sidebar({
 						</Flex>
 					</div>
 				)}
-
-				<div style={{ flex: 1 }} />
 
 				<div style={{ padding: collapsed ? "0 8px 12px" : "0 12px 12px" }}>
 					<Tooltip title={collapsed ? "New Calendar" : ""} placement="right">
@@ -534,7 +566,20 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 	const { token } = theme.useToken();
 	const isDark = themeMode === "dark";
 	const hasCalendars = calendars.length > 0;
-	const selectedCalendar = calendars.find(
+	const displayCalendars = useMemo(
+		() =>
+			calendars.map((calendar) =>
+				calendar.id === selectedCalendarId
+					? {
+							...calendar,
+							title: calendarTitleDraft || calendar.title,
+							icon: calendarSettings?.icon ?? calendar.icon,
+						}
+					: calendar,
+			),
+		[calendarSettings?.icon, calendarTitleDraft, calendars, selectedCalendarId],
+	);
+	const selectedCalendar = displayCalendars.find(
 		(calendar) => calendar.id === selectedCalendarId,
 	);
 
@@ -607,6 +652,25 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 
 		return () => {
 			isMounted = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		applyWordPressScreenMetaButtonFix();
+
+		const observer = new MutationObserver(() => {
+			applyWordPressScreenMetaButtonFix();
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeFilter: ["class", "style", "aria-expanded"],
+		});
+
+		return () => {
+			observer.disconnect();
 		};
 	}, []);
 
@@ -813,6 +877,7 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 
 	return (
 		<div
+			className="hbe-settings-shell"
 			style={{
 				display: "flex",
 				height: "100%",
@@ -824,7 +889,7 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 				collapsed={collapsed}
 				isDark={isDark}
 				activeKey={activeKey}
-				calendars={calendars}
+				calendars={displayCalendars}
 				calendarDate={calendarDate}
 				hasCalendars={hasCalendars}
 				selectedCalendarId={selectedCalendarId}
@@ -1009,6 +1074,7 @@ function App({ themeMode }: { themeMode: AdminTheme }) {
 					{activeKey === "booking" && hasCalendars && (
 						<BookingView
 							calendarId={selectedCalendarId}
+							allowDoubleBookings={Boolean(calendarSettings?.allowDoubleBookings)}
 							rightPanelVisible={isSmall ? false : rightPanelVisible}
 							selectedDate={calendarDate}
 							view={view}

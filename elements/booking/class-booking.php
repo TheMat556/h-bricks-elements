@@ -134,6 +134,19 @@ class Booking extends \Bricks\Element {
 			'default' => true,
 		);
 
+		$this->controls['showReservationSummary'] = array(
+			'tab'      => 'content',
+			'group'    => 'bookingSetup',
+			'label'    => esc_html__( 'Show reservation summary', 'h-bricks-elements' ),
+			'type'     => 'checkbox',
+			'default'  => false,
+			'required' => array(
+				'showSlots',
+				'!=',
+				'',
+			),
+		);
+
 		$this->controls['infoTitle'] = array(
 			'tab'      => 'content',
 			'group'    => 'bookingLabels',
@@ -337,7 +350,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-current-month',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-month',
 					'property' => 'color',
 				),
 			),
@@ -350,7 +363,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-weekday',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-weekday',
 					'property' => 'color',
 				),
 			),
@@ -363,8 +376,8 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-prev-month svg, .hbe-booking__calendar-mount .flatpickr-next-month svg',
-					'property' => 'fill',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-nav',
+					'property' => 'color',
 				),
 			),
 		);
@@ -380,7 +393,7 @@ class Booking extends \Bricks\Element {
 			'default' => 13,
 			'css'     => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 					'property' => 'border-radius',
 				),
 			),
@@ -397,7 +410,7 @@ class Booking extends \Bricks\Element {
 			'default' => 14,
 			'css'     => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 					'property' => 'font-size',
 				),
 			),
@@ -410,7 +423,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'border',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 				),
 			),
 		);
@@ -422,7 +435,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 					'property' => 'color',
 				),
 			),
@@ -435,7 +448,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day:hover',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available:hover',
 					'property' => 'color',
 				),
 			),
@@ -448,7 +461,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day:hover',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available:hover',
 					'property' => 'background-color',
 				),
 			),
@@ -461,7 +474,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day:hover',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available:hover',
 					'property' => 'border-color',
 				),
 			),
@@ -474,7 +487,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 					'property' => 'background-color',
 				),
 			),
@@ -487,7 +500,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 					'property' => 'border-color',
 				),
 			),
@@ -500,7 +513,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.hbe-booking__day--available',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available',
 					'property' => 'color',
 				),
 			),
@@ -513,7 +526,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.hbe-booking__day--available',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available',
 					'property' => 'background-color',
 				),
 			),
@@ -526,7 +539,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.hbe-booking__day--available',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available',
 					'property' => 'border-color',
 				),
 			),
@@ -539,7 +552,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'border',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.hbe-booking__day--available',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-available',
 				),
 			),
 		);
@@ -551,7 +564,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.selected, .hbe-booking__calendar-mount .flatpickr-day.startRange, .hbe-booking__calendar-mount .flatpickr-day.endRange',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-selected',
 					'property' => 'color',
 				),
 			),
@@ -564,7 +577,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.selected, .hbe-booking__calendar-mount .flatpickr-day.startRange, .hbe-booking__calendar-mount .flatpickr-day.endRange',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-selected',
 					'property' => 'background-color',
 				),
 			),
@@ -577,7 +590,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.selected, .hbe-booking__calendar-mount .flatpickr-day.startRange, .hbe-booking__calendar-mount .flatpickr-day.endRange',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-selected',
 					'property' => 'border-color',
 				),
 			),
@@ -590,7 +603,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'border',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.selected, .hbe-booking__calendar-mount .flatpickr-day.startRange, .hbe-booking__calendar-mount .flatpickr-day.endRange',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-selected',
 				),
 			),
 		);
@@ -602,7 +615,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.flatpickr-disabled, .hbe-booking__calendar-mount .flatpickr-day.prevMonthDay.flatpickr-disabled, .hbe-booking__calendar-mount .flatpickr-day.nextMonthDay.flatpickr-disabled',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-disabled',
 					'property' => 'color',
 				),
 			),
@@ -615,7 +628,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.flatpickr-disabled, .hbe-booking__calendar-mount .flatpickr-day.prevMonthDay.flatpickr-disabled, .hbe-booking__calendar-mount .flatpickr-day.nextMonthDay.flatpickr-disabled',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-disabled',
 					'property' => 'background-color',
 				),
 			),
@@ -628,7 +641,7 @@ class Booking extends \Bricks\Element {
 			'type'  => 'color',
 			'css'   => array(
 				array(
-					'selector' => '.hbe-booking__calendar-mount .flatpickr-day.flatpickr-disabled, .hbe-booking__calendar-mount .flatpickr-day.prevMonthDay.flatpickr-disabled, .hbe-booking__calendar-mount .flatpickr-day.nextMonthDay.flatpickr-disabled',
+					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day.is-disabled',
 					'property' => 'border-color',
 				),
 			),
@@ -1052,6 +1065,7 @@ class Booking extends \Bricks\Element {
 			isset( $this->settings['firstColumnMode'] ) ? (string) $this->settings['firstColumnMode'] : 'service'
 		);
 		$show_slots          = ! isset( $this->settings['showSlots'] ) || ! empty( $this->settings['showSlots'] );
+		$show_summary        = ! empty( $this->settings['showReservationSummary'] );
 		$info_title          = isset( $this->settings['infoTitle'] ) ? sanitize_text_field( (string) $this->settings['infoTitle'] ) : '';
 		$info_text           = isset( $this->settings['infoText'] ) ? sanitize_textarea_field( (string) $this->settings['infoText'] ) : '';
 		$first_column_label  = isset( $this->settings['firstColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['firstColumnLabel'] ) : '';
@@ -1079,6 +1093,7 @@ class Booking extends \Bricks\Element {
 		$this->set_attribute( '_root', 'data-calendar-id', (string) $calendar_id );
 		$this->set_attribute( '_root', 'data-first-column-mode', $first_column_mode );
 		$this->set_attribute( '_root', 'data-show-slots', $show_slots ? 'true' : 'false' );
+		$this->set_attribute( '_root', 'data-show-summary', $show_summary ? 'true' : 'false' );
 		$this->set_attribute( '_root', 'data-info-title', $info_title );
 		$this->set_attribute( '_root', 'data-info-text', $info_text );
 		$this->set_attribute( '_root', 'data-first-column-label', $first_column_label );
@@ -1094,7 +1109,7 @@ class Booking extends \Bricks\Element {
 		$this->render_calendar_column( $calendar_label, $calendar_id > 0, $is_builder_preview );
 
 		if ( $show_slots ) {
-			$this->render_slots_column( $slots_label, $is_builder_preview );
+			$this->render_slots_column( $slots_label, $show_summary, $is_builder_preview );
 		}
 
 		echo '</div>';
@@ -1153,20 +1168,31 @@ class Booking extends \Bricks\Element {
 		echo '<section class="hbe-booking__column hbe-booking__column--calendar">';
 		echo '<div class="hbe-booking__eyebrow">' . esc_html( $eyebrow ) . '</div>';
 		echo '<div class="hbe-booking__calendar-meta">';
+		echo '<div class="hbe-booking__calendar-topline">';
+		echo '<div>';
 		echo '<h3 class="hbe-booking__title">';
-		echo esc_html( $has_calendar ? __( 'Available dates', 'h-bricks-elements' ) : __( 'No calendar selected', 'h-bricks-elements' ) );
+		echo esc_html( $has_calendar ? __( 'Select Date', 'h-bricks-elements' ) : __( 'No calendar selected', 'h-bricks-elements' ) );
 		echo '</h3>';
-		echo '<p class="hbe-booking__copy hbe-booking__status">';
-		if ( $is_builder_preview ) {
-			echo esc_html__( 'Preview cells shown in the builder. Style controls apply to these states.', 'h-bricks-elements' );
-		} else {
-			echo esc_html( $has_calendar ? __( 'Loading calendar...', 'h-bricks-elements' ) : __( 'Select a calendar in Bricks Builder to populate the month view.', 'h-bricks-elements' ) );
-		}
+		echo '</div>';
+		echo '</div>';
+		echo '<p class="hbe-booking__copy">';
+		echo esc_html( $has_calendar ? __( 'Review availability below and pick the day that fits your selected service.', 'h-bricks-elements' ) : __( 'Select a calendar in Bricks Builder to populate the month view.', 'h-bricks-elements' ) );
 		echo '</p>';
 		echo '</div>';
 		echo '<div class="hbe-booking__calendar-mount">';
 		if ( $is_builder_preview ) {
 			$this->render_calendar_preview_markup();
+		}
+		echo '</div>';
+		echo '<div class="hbe-booking__status">';
+		if ( $is_builder_preview ) {
+			echo '<span class="hbe-booking__status-label">' . esc_html__( 'Next Availability', 'h-bricks-elements' ) . '</span>';
+			echo '<strong class="hbe-booking__status-title">' . esc_html__( 'Thursday, March 5', 'h-bricks-elements' ) . '</strong>';
+			echo '<span class="hbe-booking__status-copy">' . esc_html__( 'Preview card for the helper area below the calendar.', 'h-bricks-elements' ) . '</span>';
+		} else {
+			echo '<span class="hbe-booking__status-label">' . esc_html__( 'Loading', 'h-bricks-elements' ) . '</span>';
+			echo '<strong class="hbe-booking__status-title">' . esc_html__( 'Checking availability', 'h-bricks-elements' ) . '</strong>';
+			echo '<span class="hbe-booking__status-copy">' . esc_html__( 'Loading calendar...', 'h-bricks-elements' ) . '</span>';
 		}
 		echo '</div>';
 		echo '</section>';
@@ -1178,17 +1204,17 @@ class Booking extends \Bricks\Element {
 	 * @param bool $is_builder_preview Whether the element is rendered inside the Bricks builder.
 	 * @return void
 	 */
-	private function render_slots_column( string $slots_label, bool $is_builder_preview ): void {
+	private function render_slots_column( string $slots_label, bool $show_summary, bool $is_builder_preview ): void {
 		$eyebrow = '' !== $slots_label ? $slots_label : __( 'Availability', 'h-bricks-elements' );
 
 		echo '<section class="hbe-booking__column hbe-booking__column--slots">';
 		echo '<div class="hbe-booking__eyebrow">' . esc_html( $eyebrow ) . '</div>';
 		echo '<div class="hbe-booking__slots-body">';
 		if ( $is_builder_preview ) {
-			$this->render_slots_preview_markup();
+			$this->render_slots_preview_markup( $show_summary );
 		} else {
 			echo '<h3 class="hbe-booking__title">' . esc_html__( 'Select a date', 'h-bricks-elements' ) . '</h3>';
-			echo '<p class="hbe-booking__copy">' . esc_html__( 'Working intervals for the selected date will appear here.', 'h-bricks-elements' ) . '</p>';
+			echo '<p class="hbe-booking__copy">' . esc_html__( 'Available booking times will appear here after you choose a day.', 'h-bricks-elements' ) . '</p>';
 		}
 		echo '</div>';
 		echo '</section>';
@@ -1202,64 +1228,66 @@ class Booking extends \Bricks\Element {
 	private function render_calendar_preview_markup(): void {
 		$weekdays = array( 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' );
 		$days     = array(
-			array( 'label' => '24', 'class' => 'prevMonthDay flatpickr-disabled' ),
-			array( 'label' => '25', 'class' => 'prevMonthDay flatpickr-disabled' ),
-			array( 'label' => '26', 'class' => 'prevMonthDay flatpickr-disabled' ),
-			array( 'label' => '27', 'class' => 'prevMonthDay flatpickr-disabled' ),
-			array( 'label' => '28', 'class' => 'prevMonthDay flatpickr-disabled' ),
-			array( 'label' => '1', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '2', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '3', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '4', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '5', 'class' => 'selected hbe-booking__day--available' ),
-			array( 'label' => '6', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '7', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '8', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '9', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '10', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '11', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '12', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '13', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '14', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '15', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '16', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '17', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '18', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '19', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '20', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '21', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '22', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '23', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '24', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '25', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '26', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '27', 'class' => 'hbe-booking__day--available' ),
-			array( 'label' => '28', 'class' => 'flatpickr-disabled' ),
-			array( 'label' => '29', 'class' => 'flatpickr-disabled nextMonthDay' ),
-			array( 'label' => '30', 'class' => 'flatpickr-disabled nextMonthDay' ),
+			array( 'label' => '24', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array( 'label' => '25', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array( 'label' => '26', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array( 'label' => '27', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array( 'label' => '28', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array( 'label' => '1', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '2', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '3', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '4', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '5', 'class' => 'hbe-booking__calendar-day is-available is-selected' ),
+			array( 'label' => '6', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '7', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '8', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '9', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '10', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '11', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '12', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '13', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '14', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '15', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '16', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '17', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '18', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '19', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '20', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '21', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '22', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '23', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '24', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '25', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '26', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '27', 'class' => 'hbe-booking__calendar-day is-available' ),
+			array( 'label' => '28', 'class' => 'hbe-booking__calendar-day is-disabled' ),
+			array( 'label' => '29', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array( 'label' => '30', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
 		);
 
-		echo '<div class="flatpickr-calendar inline">';
-		echo '<div class="flatpickr-months">';
-		echo '<span class="flatpickr-prev-month">';
-		echo '<svg viewBox="0 0 17 17" aria-hidden="true"><path d="M9.6 3.4L4.5 8.5l5.1 5.1 1.4-1.4-3.7-3.7 3.7-3.7z"></path></svg>';
-		echo '</span>';
-		echo '<div class="flatpickr-month"><div class="flatpickr-current-month">March 2026</div></div>';
-		echo '<span class="flatpickr-next-month">';
-		echo '<svg viewBox="0 0 17 17" aria-hidden="true"><path d="M7.4 13.6l5.1-5.1-5.1-5.1-1.4 1.4 3.7 3.7-3.7 3.7z"></path></svg>';
-		echo '</span>';
+		echo '<div class="hbe-booking__calendar-shell">';
+		echo '<div class="hbe-booking__calendar-header">';
+		echo '<h4 class="hbe-booking__calendar-month">March 2026</h4>';
+		echo '<div class="hbe-booking__calendar-actions">';
+		echo '<button type="button" class="hbe-booking__calendar-nav" aria-label="Previous month"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg></button>';
+		echo '<button type="button" class="hbe-booking__calendar-nav" aria-label="Next month"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5" /></svg></button>';
 		echo '</div>';
-		echo '<div class="flatpickr-weekdays"><div class="flatpickr-weekdaycontainer">';
+		echo '</div>';
+		echo '<div class="hbe-booking__calendar-weekdays">';
 		foreach ( $weekdays as $weekday ) {
-			echo '<span class="flatpickr-weekday">' . esc_html( $weekday ) . '</span>';
+			echo '<div class="hbe-booking__calendar-weekday">' . esc_html( substr( $weekday, 0, 2 ) ) . '</div>';
 		}
-		echo '</div></div>';
-		echo '<div class="flatpickr-days"><div class="dayContainer">';
+		echo '</div>';
+		echo '<div class="hbe-booking__calendar-days">';
 		foreach ( $days as $day ) {
-			$classes = trim( 'flatpickr-day ' . $day['class'] );
-			echo '<span class="' . esc_attr( $classes ) . '">' . esc_html( $day['label'] ) . '</span>';
+			echo '<div class="' . esc_attr( $day['class'] ) . '">';
+			echo '<span class="hbe-booking__calendar-day-number">' . esc_html( $day['label'] ) . '</span>';
+			if ( false !== strpos( $day['class'], 'is-available' ) ) {
+				echo '<span class="hbe-booking__calendar-dot"></span>';
+			}
+			echo '</div>';
 		}
-		echo '</div></div>';
+		echo '</div>';
 		echo '</div>';
 	}
 
@@ -1290,15 +1318,33 @@ class Booking extends \Bricks\Element {
 	 *
 	 * @return void
 	 */
-	private function render_slots_preview_markup(): void {
-		echo '<h3 class="hbe-booking__title">' . esc_html__( 'Tuesday, March 5, 2026', 'h-bricks-elements' ) . '</h3>';
-		echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview time slot cells shown in the builder for styling.', 'h-bricks-elements' ) . '</p>';
-		echo '<div class="hbe-booking__slot-summary">' . esc_html__( 'Using preview data', 'h-bricks-elements' ) . '</div>';
-		echo '<ul class="hbe-booking__slot-list">';
-		echo '<li class="hbe-booking__slot-item"><span class="hbe-booking__slot-time">09:00 - 10:00</span><span class="hbe-booking__slot-date">Mar 5</span></li>';
-		echo '<li class="hbe-booking__slot-item"><span class="hbe-booking__slot-time">11:30 - 12:30</span><span class="hbe-booking__slot-date">Mar 5</span></li>';
-		echo '<li class="hbe-booking__slot-item"><span class="hbe-booking__slot-time">15:00 - 16:00</span><span class="hbe-booking__slot-date">Mar 5</span></li>';
-		echo '</ul>';
+	private function render_slots_preview_markup( bool $show_summary ): void {
+		echo '<div class="hbe-booking__slots-header">';
+		echo '<h3 class="hbe-booking__title">' . esc_html__( 'Available Times', 'h-bricks-elements' ) . '</h3>';
+		echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview booking slots shown in the builder.', 'h-bricks-elements' ) . '</p>';
+		echo '</div>';
+		echo '<div class="hbe-booking__slot-list">';
+		echo '<button type="button" class="hbe-booking__slot-item is-selected"><span class="hbe-booking__slot-time">09:00 - 10:00</span><span class="hbe-booking__slot-date">Mar 5</span></button>';
+		echo '<button type="button" class="hbe-booking__slot-item"><span class="hbe-booking__slot-time">11:30 - 12:30</span><span class="hbe-booking__slot-date">Mar 5</span></button>';
+		echo '<button type="button" class="hbe-booking__slot-item"><span class="hbe-booking__slot-time">15:00 - 16:00</span><span class="hbe-booking__slot-date">Mar 5</span></button>';
+		echo '</div>';
+		echo '<div class="hbe-booking__slot-actions">';
+		echo '<button type="button" class="hbe-booking__details-button">' . esc_html__( 'Continue to Booking Details', 'h-bricks-elements' ) . '</button>';
+		echo '</div>';
+		echo '<div class="hbe-booking__booking-card">';
+		if ( $show_summary ) {
+			echo '<div class="hbe-booking__booking-kicker">' . esc_html__( 'Reservation Summary', 'h-bricks-elements' ) . '</div>';
+			echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Service', 'h-bricks-elements' ) . '</span><strong>' . esc_html__( 'Initial Consultation', 'h-bricks-elements' ) . '</strong></div>';
+			echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Date', 'h-bricks-elements' ) . '</span><strong>' . esc_html__( 'Tuesday, March 5, 2026', 'h-bricks-elements' ) . '</strong></div>';
+			echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Time', 'h-bricks-elements' ) . '</span><strong>09:00 - 10:00</strong></div>';
+			echo '<div class="hbe-booking__booking-row is-total"><span>' . esc_html__( 'Total Due', 'h-bricks-elements' ) . '</span><strong>$180.00</strong></div>';
+		} else {
+			echo '<div class="hbe-booking__booking-kicker">' . esc_html__( 'Booking Details', 'h-bricks-elements' ) . '</div>';
+			echo '<p class="hbe-booking__copy">' . esc_html__( 'Keep the booking form visible without the summary card details.', 'h-bricks-elements' ) . '</p>';
+		}
+		echo '<button type="button" class="hbe-booking__confirm-button">' . esc_html__( 'Confirm Reservation', 'h-bricks-elements' ) . '</button>';
+		echo '<p class="hbe-booking__booking-policy">' . esc_html__( 'Preview content for builder styling.', 'h-bricks-elements' ) . '</p>';
+		echo '</div>';
 	}
 
 	/**
