@@ -1414,16 +1414,17 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: 1.25rem;
+	gap: 1rem;
 	flex: 0 0 40%;
 	min-width: 0;
-	padding-right: 1rem;
+	padding-right: 1.25rem;
+	border-right: 1px solid var(--hbe-booking-border-column);
 }
 
 .hbe-booking__success-head {
 	display: flex;
 	flex-direction: column;
-	gap: 0.55rem;
+	gap: 0.5rem;
 }
 
 .hbe-booking__success-head > :nth-child(1) {
@@ -1438,12 +1439,16 @@
 	animation-delay: 220ms;
 }
 
+.hbe-booking__success-hero .hbe-booking__title {
+	font-size: var(--hbe-booking-fs-lg);
+}
+
 .hbe-booking__success-badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
 	width: fit-content;
-	padding: 0.3rem 0.7rem 0.3rem 0.55rem;
+	padding: 0.25rem 0.65rem 0.25rem 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--hbe-booking-primary) 14%, white);
 	color: var(--hbe-booking-primary-strong);
@@ -1466,13 +1471,14 @@
 
 .hbe-booking__success-copy {
 	max-width: 22rem;
+	font-size: var(--hbe-booking-fs-sm);
 }
 
 .hbe-booking__success-actions {
 	display: flex;
 	flex-direction: column;
-	gap: 0.65rem;
-	margin-top: 0.5rem;
+	gap: 0.55rem;
+	margin-top: 0.2rem;
 }
 
 .hbe-booking__success-cta {
@@ -1480,13 +1486,13 @@
 	align-items: center;
 	justify-content: center;
 	width: fit-content;
-	padding: 0.75rem 1.65rem;
+	padding: 0.6rem 1.4rem;
 	border: 0;
 	border-radius: 999px;
 	background: var(--hbe-booking-primary);
 	color: white;
 	font: inherit;
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-sm);
 	font-weight: 700;
 	letter-spacing: 0;
 	cursor: pointer;
@@ -1510,7 +1516,7 @@
 
 .hbe-booking__success-support-note {
 	margin: 0;
-	font-size: var(--hbe-booking-fs-sm);
+	font-size: var(--hbe-booking-fs-xs);
 	line-height: 1.55;
 	color: var(--hbe-booking-text-muted);
 	max-width: 20rem;
@@ -1521,7 +1527,7 @@
 .hbe-booking__success-card {
 	display: flex;
 	flex-direction: column;
-	gap: 0.75rem;
+	gap: 1.1rem;
 	flex: 1;
 	min-width: 0;
 	min-height: 0;
@@ -1538,42 +1544,42 @@
 .hbe-booking__success-section-label {
 	font-size: var(--hbe-booking-fs-xs);
 	font-weight: 800;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.07em;
 	text-transform: uppercase;
 	color: var(--hbe-booking-text-soft);
-	padding-inline: 0.5rem;
+	padding-inline: 0.1rem;
 }
 
 .hbe-booking__success-section-body {
 	display: flex;
 	flex-direction: column;
-	gap: 0.6rem;
-	padding: 0.85rem 0.95rem;
+	gap: 0.3rem;
+	padding: 0.65rem 0.8rem;
 	border: 1px solid var(--hbe-booking-border-column);
-	border-radius: 0.85rem;
+	border-radius: 0.75rem;
 	background: var(--hbe-booking-surface-low);
 }
 
 .hbe-booking__success-kv {
 	display: flex;
 	flex-direction: column;
-	gap: 0.1rem;
+	gap: 0.05rem;
 }
 
 .hbe-booking__success-kv-label {
-	font-size: var(--hbe-booking-fs-sm);
+	font-size: var(--hbe-booking-fs-xs);
 	color: var(--hbe-booking-text-muted);
 }
 
 .hbe-booking__success-kv-value {
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-sm);
 	font-weight: 600;
 	color: var(--hbe-booking-text);
 	line-height: 1.4;
 }
 
 .hbe-booking__success-kv-sub {
-	font-size: var(--hbe-booking-fs-sm);
+	font-size: var(--hbe-booking-fs-xs);
 	color: var(--hbe-booking-text-muted);
 	line-height: 1.45;
 }
@@ -1582,10 +1588,10 @@
 .hbe-booking__success-participant {
 	display: flex;
 	align-items: center;
-	gap: 0.85rem;
-	padding: 0.75rem 0.95rem;
+	gap: 0.75rem;
+	padding: 0.55rem 0.8rem;
 	border: 1px solid var(--hbe-booking-border-column);
-	border-radius: 0.85rem;
+	border-radius: 0.75rem;
 	background: var(--hbe-booking-surface-low);
 }
 
@@ -1594,12 +1600,12 @@
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	width: 2.6rem;
-	height: 2.6rem;
+	width: 2.1rem;
+	height: 2.1rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--hbe-booking-primary) 18%, white);
 	color: var(--hbe-booking-primary-strong);
-	font-size: var(--hbe-booking-fs-sm);
+	font-size: var(--hbe-booking-fs-xs);
 	font-weight: 800;
 	letter-spacing: 0.04em;
 }
@@ -1607,7 +1613,7 @@
 .hbe-booking__success-participant-info {
 	display: flex;
 	flex-direction: column;
-	gap: 0.1rem;
+	gap: 0.05rem;
 	min-width: 0;
 }
 
