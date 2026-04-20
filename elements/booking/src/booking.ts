@@ -323,6 +323,8 @@ async function initBookingElement(root: HTMLElement) {
 				? error.message
 				: "Calendar data could not be loaded.",
 		);
+	} finally {
+		state.root.removeAttribute("data-loading");
 	}
 
 	// Dynamically switch layout when crossing the mobile breakpoint
@@ -852,24 +854,14 @@ async function createPublicBookingRequest(
 }
 
 function renderLoadingState(state: BookingState) {
-	if (state.statusEl) {
-		state.statusEl.innerHTML = `
-			<span class="hbe-booking__status-label">Loading</span>
-			<strong class="hbe-booking__status-title">Checking availability</strong>
-			<span class="hbe-booking__status-copy">Loading calendar...</span>
-		`;
+	state.root.setAttribute("data-loading", "");
+
+	if (state.slotsBodyEl) {
+		state.slotsBodyEl.innerHTML = "";
 	}
 
 	if (state.firstColumnMode === "service" && state.firstBodyEl) {
-		state.firstBodyEl.innerHTML =
-			'<p class="hbe-booking__copy">Loading booking options...</p>';
-	}
-
-	if (state.slotsBodyEl) {
-		state.slotsBodyEl.innerHTML = `
-			<h3 class="hbe-booking__title">Select a date</h3>
-			<p class="hbe-booking__copy">Available booking times will appear after the calendar has loaded.</p>
-		`;
+		state.firstBodyEl.innerHTML = "";
 	}
 
 	syncStepperUI(state);

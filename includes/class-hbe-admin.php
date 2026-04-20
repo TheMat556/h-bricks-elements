@@ -100,16 +100,7 @@ class HBE_Admin {
 		// phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- inline style has no version.
 		wp_register_style( 'h-bricks-admin-page', false );
 		wp_enqueue_style( 'h-bricks-admin-page' );
-		wp_add_inline_style(
-			'h-bricks-admin-page',
-			'html, body, #wpwrap, #wpcontent, #wpbody, #wpbody-content, #h-bricks-admin-root { height: 100%; }
-			#adminmenumain { display: none; }
-			#wpcontent { padding: 0 !important; }
-			#wpcontent, #wpfooter { margin-left: 0 !important; }
-			#wpbody-content { padding-bottom: 0 !important; }
-			#wpfooter { display: none; }
-			#h-bricks-admin-root { height: 100%; min-height: 100%; }'
-		);
+		wp_add_inline_style( 'h-bricks-admin-page', self::get_admin_page_styles() );
 	}
 
 	/**
@@ -139,6 +130,7 @@ class HBE_Admin {
 
 		return array(
 			'theme'             => $theme,
+			'locale'            => determine_locale(),
 			'restUrl'           => esc_url_raw( rest_url( 'hbe/v1/' ) ),
 			'restNonce'         => wp_create_nonce( 'wp_rest' ),
 			'pluginUrl'         => HBE_PLUGIN_URL,
@@ -147,5 +139,56 @@ class HBE_Admin {
 			'initialCalendars'  => $calendars,
 			'selectedCalendarId' => ! empty( $calendars ) ? (int) $calendars[0]['id'] : 0,
 		);
+	}
+
+	/**
+	 * Returns the CSS needed for embedded vs standalone admin rendering.
+	 *
+	 * @return string
+	 */
+	private static function get_admin_page_styles(): string {
+		$is_shell_embed = isset( $_GET['wp_shell_embed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['wp_shell_embed'] ) );
+
+		if ( $is_shell_embed ) {
+			return 'html, body, #wpwrap, #wpcontent, #wpbody, #wpbody-content, #h-bricks-admin-root { height: 100% !important; min-height: 100% !important; }
+			#adminmenumain { display: none; }
+			#wpcontent { padding: 0 !important; }
+			#wpcontent, #wpfooter { margin-left: 0 !important; }
+			#wpbody-content { padding-bottom: 0 !important; }
+			#wpfooter { display: none; }
+			#h-bricks-admin-root { height: 100% !important; min-height: 100% !important; }';
+		}
+
+		return 'html, body, #wpwrap, #wpcontent, #wpbody, #wpbody-content { height: 100% !important; min-height: 100% !important; }
+		#wpcontent {
+			height: 100vh !important;
+			min-height: 100vh !important;
+			padding-left: 0 !important;
+		}
+		#wpbody {
+			height: 100% !important;
+			min-height: 100% !important;
+		}
+		#wpfooter { display: none; }
+		#wpbody-content {
+			display: flex;
+			flex-direction: column;
+			height: 100% !important;
+			min-height: 100vh !important;
+			padding: 0 !important;
+			padding-bottom: 0 !important;
+			margin: 0 !important;
+		}
+		#wpbody-content > .wrap {
+			height: 100% !important;
+			min-height: 100% !important;
+			margin: 0 !important;
+			padding: 0 !important;
+		}
+		#h-bricks-admin-root {
+			flex: 1 1 auto;
+			height: 100% !important;
+			min-height: 100vh !important;
+		}';
 	}
 }

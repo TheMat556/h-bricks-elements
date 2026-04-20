@@ -7,6 +7,12 @@
 	--hbe-settings-input-radius: 10px;
 	--hbe-settings-input-height: 40px;
 	--hbe-settings-input-font-size: 13px;
+
+	/* Chrome colors — mirror the shell's --shell-chrome-* variables */
+	--hbe-chrome-bg: #edf1f5;
+	--hbe-chrome-raised: rgba(255, 255, 255, 0.76);
+	--hbe-chrome-border: rgba(15, 23, 42, 0.09);
+	--hbe-chrome-surface: #ffffff;
 }
 
 body[data-theme="dark"] .hbe-settings-shell {
@@ -15,10 +21,46 @@ body[data-theme="dark"] .hbe-settings-shell {
 	--hbe-settings-input-border-hover: rgba(64, 150, 255, 0.55);
 	--hbe-settings-input-text: rgba(255, 255, 255, 0.88);
 	--hbe-settings-input-placeholder: rgba(255, 255, 255, 0.38);
+
+	/* Chrome colors — dark equivalents of shell's --shell-chrome-* */
+	--hbe-chrome-bg: #172132;
+	--hbe-chrome-raised: rgba(19, 28, 43, 0.88);
+	--hbe-chrome-border: rgba(255, 255, 255, 0.12);
+	--hbe-chrome-surface: #131c2b;
+}
+
+.hbe-settings-toolbar {
+	backdrop-filter: none;
+	box-shadow: none;
+}
+
+.hbe-settings-shell {
+	height: 100%;
+	min-height: 100%;
+}
+
+.hbe-settings-booking-workspace {
+	box-sizing: border-box;
+}
+
+.hbe-settings-booking-view {
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	backdrop-filter: none;
+	overflow: hidden;
+	height: 100%;
+	min-height: 100%;
+}
+
+.hbe-settings-booking-main {
+	backdrop-filter: none;
 }
 
 .hbe-settings-shell .ant-input,
 .hbe-settings-shell .ant-input-affix-wrapper,
+.hbe-settings-shell .ant-input-textarea,
 .hbe-settings-shell .ant-input-number,
 .hbe-settings-shell .ant-input-number-affix-wrapper,
 .hbe-settings-shell .ant-picker,
@@ -29,6 +71,13 @@ body[data-theme="dark"] .hbe-settings-shell {
 	color: var(--hbe-settings-input-text) !important;
 	box-shadow: none !important;
 	font-size: var(--hbe-settings-input-font-size) !important;
+}
+
+.hbe-settings-shell .ant-input-textarea textarea.ant-input {
+	background: var(--hbe-settings-input-bg) !important;
+	color: var(--hbe-settings-input-text) !important;
+	height: auto !important;
+	min-height: 80px;
 }
 
 .hbe-settings-shell .ant-input:not(textarea),
@@ -114,6 +163,8 @@ body[data-theme="dark"] .hbe-settings-shell {
 
 .hbe-settings-shell .ant-input:hover,
 .hbe-settings-shell .ant-input:focus,
+.hbe-settings-shell .ant-input-textarea:hover,
+.hbe-settings-shell .ant-input-textarea:focus-within,
 .hbe-settings-shell .ant-input-affix-wrapper:hover,
 .hbe-settings-shell .ant-input-affix-wrapper:focus,
 .hbe-settings-shell .ant-input-affix-wrapper-focused,
@@ -129,7 +180,11 @@ body[data-theme="dark"] .hbe-settings-shell {
 
 .hbe-settings-shell .ant-input-number-group-addon {
 	border-color: var(--hbe-settings-input-border) !important;
-	background: color-mix(in srgb, var(--hbe-settings-input-bg) 92%, black 8%) !important;
+	background: color-mix(
+		in srgb,
+		var(--hbe-settings-input-bg) 92%,
+		black 8%
+	) !important;
 	color: var(--hbe-settings-input-text) !important;
 	min-height: var(--hbe-settings-input-height) !important;
 	height: var(--hbe-settings-input-height) !important;
@@ -141,11 +196,13 @@ body[data-theme="dark"] .hbe-settings-shell {
 }
 
 .hbe-settings-shell .ant-input-number-group-addon:first-child {
-	border-radius: var(--hbe-settings-input-radius) 0 0 var(--hbe-settings-input-radius) !important;
+	border-radius: var(--hbe-settings-input-radius) 0 0
+		var(--hbe-settings-input-radius) !important;
 }
 
 .hbe-settings-shell .ant-input-number-group-addon:last-child {
-	border-radius: 0 var(--hbe-settings-input-radius) var(--hbe-settings-input-radius) 0 !important;
+	border-radius: 0 var(--hbe-settings-input-radius)
+		var(--hbe-settings-input-radius) 0 !important;
 }
 
 .hbe-settings-shell .ant-input-number-group-wrapper,
@@ -187,17 +244,25 @@ body[data-theme="dark"] .hbe-settings-shell {
 }
 
 .hbe-settings-shell .ant-picker-calendar-mini .ant-picker-calendar-year-select,
-.hbe-settings-shell .ant-picker-calendar-mini .ant-picker-calendar-month-select {
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-picker-calendar-month-select {
 	min-width: 0;
 	width: 100%;
 }
 
-.hbe-settings-shell .ant-picker-calendar-mini .ant-picker-calendar-header .ant-select {
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-picker-calendar-header
+	.ant-select {
 	width: 100% !important;
 	min-width: 0;
 }
 
-.hbe-settings-shell .ant-picker-calendar-mini .ant-select-single .ant-select-selector {
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-select-single
+	.ant-select-selector {
 	min-height: 32px !important;
 	height: 32px !important;
 	padding: 0 28px 0 10px !important;
@@ -220,6 +285,38 @@ body[data-theme="dark"] .hbe-settings-shell {
 	inset-inline-end: 10px !important;
 }
 
+.hbe-settings-sidebar-calendar,
+.hbe-settings-sidebar-calendar .ant-picker-panel {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-picker-calendar-header {
+	padding-inline: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-picker-body {
+	padding-inline: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-select-selector,
+.hbe-settings-sidebar-calendar .ant-picker-cell-inner,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date-today,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date-value,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date-content {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar *,
+.hbe-settings-sidebar-calendar *::before,
+.hbe-settings-sidebar-calendar *::after {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-picker-calendar-mode-switch {
+	display: none !important;
+}
+
 body[data-theme="dark"] .hbe-settings-shell .ant-input-number-group-addon {
 	background: #262626 !important;
 }
@@ -237,14 +334,15 @@ body[data-theme="dark"] .hbe-settings-shell .ant-input-number-group-addon {
 
 #screen-meta-links .show-settings::after {
 	content: "\f140";
-	content: "\f140" / "";
 	right: auto;
 	bottom: auto;
 	display: inline-block;
 	padding: 0 0 0 2px;
 	position: static;
 	vertical-align: middle;
-	font: normal 20px/1 dashicons;
+	font:
+		normal 20px / 1 dashicons,
+		sans-serif;
 	text-align: center;
 	flex-shrink: 0;
 }

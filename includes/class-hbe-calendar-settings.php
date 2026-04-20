@@ -29,6 +29,11 @@ class HBE_Calendar_Settings {
 	public static function get_defaults(): array {
 		return array(
 			'icon'          => '',
+			'publicBooking' => array(
+				'displayName'         => '',
+				'defaultServiceLabel' => '',
+				'locationLabel'       => '',
+			),
 			'allowDoubleBookings' => false,
 			'adminOnly'     => false,
 			'slotSettings'  => array(
@@ -38,15 +43,10 @@ class HBE_Calendar_Settings {
 				'maxAdvanceDays'  => 0,
 			),
 			'mailSettings'  => array(
-				'enabled'    => false,
-				'host'       => '',
-				'port'       => 587,
-				'encryption' => 'tls',
-				'username'   => '',
-				'password'   => '',
-				'fromName'   => '',
-				'fromEmail'  => '',
-				'subject'    => 'Booking confirmation',
+				'enabled'   => false,
+				'fromName'  => '',
+				'fromEmail' => '',
+				'subject'   => 'Booking confirmation',
 			),
 			'workingHours'  => array(
 				'monday'    => array(
@@ -168,6 +168,11 @@ class HBE_Calendar_Settings {
 			),
 			'allowDoubleBookings' => ! empty( $settings['allowDoubleBookings'] ),
 			'adminOnly'     => ! empty( $settings['adminOnly'] ),
+			'publicBooking' => self::sanitize_public_booking(
+				isset( $settings['publicBooking'] ) && is_array( $settings['publicBooking'] )
+					? $settings['publicBooking']
+					: array()
+			),
 			'slotSettings'  => self::sanitize_slot_settings(
 				isset( $settings['slotSettings'] ) && is_array( $settings['slotSettings'] )
 					? $settings['slotSettings']
@@ -232,6 +237,26 @@ class HBE_Calendar_Settings {
 	}
 
 	/**
+	 * Sanitizes public booking labels.
+	 *
+	 * @param array<string,mixed> $public_booking Raw public booking labels.
+	 * @return array<string,string>
+	 */
+	private static function sanitize_public_booking( array $public_booking ): array {
+		return array(
+			'displayName'         => isset( $public_booking['displayName'] )
+				? sanitize_text_field( (string) $public_booking['displayName'] )
+				: '',
+			'defaultServiceLabel' => isset( $public_booking['defaultServiceLabel'] )
+				? sanitize_text_field( (string) $public_booking['defaultServiceLabel'] )
+				: '',
+			'locationLabel'       => isset( $public_booking['locationLabel'] )
+				? sanitize_text_field( (string) $public_booking['locationLabel'] )
+				: '',
+		);
+	}
+
+	/**
 	 * Sanitizes default slot timing settings.
 	 *
 	 * @param array<string,mixed> $slot_settings Raw slot settings.
@@ -260,32 +285,17 @@ class HBE_Calendar_Settings {
 	}
 
 	/**
-	 * Sanitizes dummy mail settings.
+	 * Sanitizes mail settings.
 	 *
 	 * @param array<string,mixed> $mail_settings Raw mail settings.
 	 * @return array<string,mixed>
 	 */
 	private static function sanitize_mail_settings( array $mail_settings ): array {
-		$defaults = self::get_defaults()['mailSettings'];
-
-		$encryption = isset( $mail_settings['encryption'] )
-			? sanitize_key( (string) $mail_settings['encryption'] )
-			: (string) $defaults['encryption'];
-
-		if ( ! in_array( $encryption, array( 'none', 'ssl', 'tls' ), true ) ) {
-			$encryption = (string) $defaults['encryption'];
-		}
-
 		return array(
-			'enabled'    => ! empty( $mail_settings['enabled'] ),
-			'host'       => isset( $mail_settings['host'] ) ? sanitize_text_field( (string) $mail_settings['host'] ) : (string) $defaults['host'],
-			'port'       => isset( $mail_settings['port'] ) ? absint( $mail_settings['port'] ) : (int) $defaults['port'],
-			'encryption' => $encryption,
-			'username'   => isset( $mail_settings['username'] ) ? sanitize_text_field( (string) $mail_settings['username'] ) : (string) $defaults['username'],
-			'password'   => isset( $mail_settings['password'] ) ? sanitize_text_field( (string) $mail_settings['password'] ) : (string) $defaults['password'],
-			'fromName'   => isset( $mail_settings['fromName'] ) ? sanitize_text_field( (string) $mail_settings['fromName'] ) : (string) $defaults['fromName'],
-			'fromEmail'  => isset( $mail_settings['fromEmail'] ) ? sanitize_email( (string) $mail_settings['fromEmail'] ) : (string) $defaults['fromEmail'],
-			'subject'    => isset( $mail_settings['subject'] ) ? sanitize_text_field( (string) $mail_settings['subject'] ) : (string) $defaults['subject'],
+			'enabled'   => ! empty( $mail_settings['enabled'] ),
+			'fromName'  => isset( $mail_settings['fromName'] ) ? sanitize_text_field( (string) $mail_settings['fromName'] ) : '',
+			'fromEmail' => isset( $mail_settings['fromEmail'] ) ? sanitize_email( (string) $mail_settings['fromEmail'] ) : '',
+			'subject'   => isset( $mail_settings['subject'] ) ? sanitize_text_field( (string) $mail_settings['subject'] ) : 'Booking confirmation',
 		);
 	}
 
@@ -359,6 +369,7 @@ class HBE_Calendar_Settings {
 					? sanitize_key( (string) $service['id'] )
 					: sanitize_key( 'service_' . wp_generate_uuid4() ),
 				'name'        => $name,
+				'publicLabel' => isset( $service['publicLabel'] ) ? sanitize_text_field( (string) $service['publicLabel'] ) : '',
 				'duration'    => max( 1, isset( $service['duration'] ) ? absint( $service['duration'] ) : 30 ),
 				'prepTime'    => isset( $service['prepTime'] ) ? absint( $service['prepTime'] ) : 0,
 				'cleanupTime' => isset( $service['cleanupTime'] ) ? absint( $service['cleanupTime'] ) : 0,

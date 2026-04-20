@@ -74,6 +74,7 @@
 	--hbe-booking-fs-xs: calc(var(--hbe-booking-fs) * 0.72);
 	--hbe-booking-fs-lg: calc(var(--hbe-booking-fs) * 1.15);
 	display: grid;
+	position: relative;
 	width: 100%;
 	max-width: 100%;
 	min-width: min(20rem, 100%);
@@ -96,6 +97,32 @@
 	height: 100%;
 	min-height: var(--hbe-booking-panel-min-height);
 	transition: grid-template-columns 420ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading overlay — full-container spinner while calendar data is fetched */
+.hbe-booking[data-loading]::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 20;
+	background: white;
+	border-radius: inherit;
+}
+
+.hbe-booking[data-loading]::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	z-index: 21;
+	width: 2.5rem;
+	height: 2.5rem;
+	margin-top: -1.25rem;
+	margin-left: -1.25rem;
+	border: 3px solid rgba(0, 0, 0, 0.08);
+	border-top-color: var(--hbe-booking-primary);
+	border-radius: 999px;
+	animation: hbe-booking-spin 0.75s linear infinite;
 }
 
 .hbe-booking__stepper-progress {

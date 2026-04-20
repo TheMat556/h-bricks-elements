@@ -30,6 +30,43 @@ class HBE_Plugin {
 	}
 
 	/**
+	 * Sends a booking confirmation email via wp_mail().
+	 * SMTP delivery is handled by whatever mail plugin is active on the site.
+	 *
+	 * @param int                $calendar_id Calendar post ID.
+	 * @param array<string,mixed> $booking    Formatted booking row.
+	 * @return bool
+	 */
+	public static function send_booking_confirmation( int $calendar_id, array $booking ): bool {
+		$settings = HBE_Calendar_Settings::get( $calendar_id );
+		$mail     = $settings['mailSettings'] ?? array();
+
+		if ( empty( $mail['enabled'] ) || empty( $booking['customerEmail'] ) ) {
+			return false;
+		}
+
+		$to      = sanitize_email( $booking['customerEmail'] );
+		$subject = ! empty( $mail['subject'] ) ? $mail['subject'] : 'Booking confirmation';
+		$name    = ! empty( $booking['customerName'] ) ? $booking['customerName'] : $to;
+		$start   = ! empty( $booking['start'] ) ? $booking['start'] : '';
+
+		$body = sprintf(
+			"Hi %s,\n\nYour booking has been received.\n\nStart: %s\n\nThank you.",
+			$name,
+			$start
+		);
+
+		$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+
+		if ( ! empty( $mail['fromEmail'] ) && is_email( $mail['fromEmail'] ) ) {
+			$from_name = ! empty( $mail['fromName'] ) ? $mail['fromName'] : $mail['fromEmail'];
+			$headers[] = 'From: ' . $from_name . ' <' . $mail['fromEmail'] . '>';
+		}
+
+		return (bool) wp_mail( $to, $subject, $body, $headers );
+	}
+
+	/**
 	 * Runs activation tasks.
 	 *
 	 * @return void

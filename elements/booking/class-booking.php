@@ -147,6 +147,44 @@ class Booking extends \Bricks\Element {
 			),
 		);
 
+		$this->controls['layoutMode'] = array(
+			'tab'     => 'content',
+			'group'   => 'bookingSetup',
+			'label'   => esc_html__( 'Flow mode', 'h-bricks-elements' ),
+			'type'    => 'select',
+			'options' => array(
+				'inline'  => esc_html__( 'Inline', 'h-bricks-elements' ),
+				'stepper' => esc_html__( 'Stepper', 'h-bricks-elements' ),
+			),
+			'default' => 'inline',
+		);
+
+		$this->controls['stepperAutoAdvance'] = array(
+			'tab'      => 'content',
+			'group'    => 'bookingSetup',
+			'label'    => esc_html__( 'Auto continue in stepper', 'h-bricks-elements' ),
+			'type'     => 'checkbox',
+			'default'  => false,
+			'required' => array(
+				'layoutMode',
+				'=',
+				'stepper',
+			),
+		);
+
+		$this->controls['showStepperProgress'] = array(
+			'tab'      => 'content',
+			'group'    => 'bookingSetup',
+			'label'    => esc_html__( 'Show stepper progress', 'h-bricks-elements' ),
+			'type'     => 'checkbox',
+			'default'  => true,
+			'required' => array(
+				'layoutMode',
+				'=',
+				'stepper',
+			),
+		);
+
 		$this->controls['infoTitle'] = array(
 			'tab'      => 'content',
 			'group'    => 'bookingLabels',
@@ -205,6 +243,30 @@ class Booking extends \Bricks\Element {
 				'!=',
 				'',
 			),
+		);
+
+		$this->controls['successTitle'] = array(
+			'tab'     => 'content',
+			'group'   => 'bookingLabels',
+			'label'   => esc_html__( 'Success title', 'h-bricks-elements' ),
+			'type'    => 'text',
+			'default' => esc_html__( 'This meeting is scheduled', 'h-bricks-elements' ),
+		);
+
+		$this->controls['successText'] = array(
+			'tab'     => 'content',
+			'group'   => 'bookingLabels',
+			'label'   => esc_html__( 'Success text', 'h-bricks-elements' ),
+			'type'    => 'textarea',
+			'default' => esc_html__( 'Your booking is confirmed. Please keep these details for your records.', 'h-bricks-elements' ),
+		);
+
+		$this->controls['successButtonLabel'] = array(
+			'tab'     => 'content',
+			'group'   => 'bookingLabels',
+			'label'   => esc_html__( 'Success button label', 'h-bricks-elements' ),
+			'type'    => 'text',
+			'default' => esc_html__( 'Book another time', 'h-bricks-elements' ),
 		);
 
 		$this->controls['columnGap'] = array(
@@ -1066,11 +1128,19 @@ class Booking extends \Bricks\Element {
 		);
 		$show_slots          = ! isset( $this->settings['showSlots'] ) || ! empty( $this->settings['showSlots'] );
 		$show_summary        = ! empty( $this->settings['showReservationSummary'] );
+		$layout_mode         = $this->normalize_layout_mode(
+			isset( $this->settings['layoutMode'] ) ? (string) $this->settings['layoutMode'] : 'inline'
+		);
+		$stepper_auto_advance = ! empty( $this->settings['stepperAutoAdvance'] );
+		$show_stepper_progress = ! isset( $this->settings['showStepperProgress'] ) || ! empty( $this->settings['showStepperProgress'] );
 		$info_title          = isset( $this->settings['infoTitle'] ) ? sanitize_text_field( (string) $this->settings['infoTitle'] ) : '';
 		$info_text           = isset( $this->settings['infoText'] ) ? sanitize_textarea_field( (string) $this->settings['infoText'] ) : '';
 		$first_column_label  = isset( $this->settings['firstColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['firstColumnLabel'] ) : '';
 		$calendar_label      = isset( $this->settings['calendarColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['calendarColumnLabel'] ) : '';
 		$slots_label         = isset( $this->settings['slotsColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['slotsColumnLabel'] ) : '';
+		$success_title       = isset( $this->settings['successTitle'] ) ? sanitize_text_field( (string) $this->settings['successTitle'] ) : '';
+		$success_text        = isset( $this->settings['successText'] ) ? sanitize_textarea_field( (string) $this->settings['successText'] ) : '';
+		$success_button_label = isset( $this->settings['successButtonLabel'] ) ? sanitize_text_field( (string) $this->settings['successButtonLabel'] ) : '';
 		$column_count        = 1;
 		$is_builder_preview  = $this->is_bricks_builder_preview();
 
@@ -1086,6 +1156,7 @@ class Booking extends \Bricks\Element {
 			'hbe-booking',
 			'hbe-booking--columns-' . $column_count,
 			'hbe-booking--first-' . $first_column_mode,
+			'hbe-booking--layout-' . $layout_mode,
 		);
 
 		$this->set_attribute( '_root', 'class', implode( ' ', $root_classes ) );
@@ -1094,9 +1165,15 @@ class Booking extends \Bricks\Element {
 		$this->set_attribute( '_root', 'data-first-column-mode', $first_column_mode );
 		$this->set_attribute( '_root', 'data-show-slots', $show_slots ? 'true' : 'false' );
 		$this->set_attribute( '_root', 'data-show-summary', $show_summary ? 'true' : 'false' );
+		$this->set_attribute( '_root', 'data-layout-mode', $layout_mode );
+		$this->set_attribute( '_root', 'data-stepper-auto-advance', $stepper_auto_advance ? 'true' : 'false' );
+		$this->set_attribute( '_root', 'data-show-stepper-progress', $show_stepper_progress ? 'true' : 'false' );
 		$this->set_attribute( '_root', 'data-info-title', $info_title );
 		$this->set_attribute( '_root', 'data-info-text', $info_text );
 		$this->set_attribute( '_root', 'data-first-column-label', $first_column_label );
+		$this->set_attribute( '_root', 'data-success-title', $success_title );
+		$this->set_attribute( '_root', 'data-success-text', $success_text );
+		$this->set_attribute( '_root', 'data-success-button-label', $success_button_label );
 		$this->set_attribute( '_root', 'data-builder-preview', $is_builder_preview ? 'true' : 'false' );
 		$this->set_attribute( '_root', 'data-rest-base', untrailingslashit( rest_url( HBE_REST::NAMESPACE ) ) );
 
@@ -1109,7 +1186,7 @@ class Booking extends \Bricks\Element {
 		$this->render_calendar_column( $calendar_label, $calendar_id > 0, $is_builder_preview );
 
 		if ( $show_slots ) {
-			$this->render_slots_column( $slots_label, $show_summary, $is_builder_preview );
+			$this->render_slots_column( $slots_label, $show_summary, $first_column_mode, $is_builder_preview );
 		}
 
 		echo '</div>';
@@ -1145,10 +1222,10 @@ class Booking extends \Bricks\Element {
 			$this->render_service_preview_markup();
 		} elseif ( $has_calendar ) {
 			echo '<div class="hbe-booking__service-list">';
-			echo '<p class="hbe-booking__copy">' . esc_html__( 'Loading services...', 'h-bricks-elements' ) . '</p>';
+			echo '<p class="hbe-booking__copy">' . esc_html__( 'Loading booking options...', 'h-bricks-elements' ) . '</p>';
 			echo '</div>';
 		} else {
-			echo '<p class="hbe-booking__copy">' . esc_html__( 'Choose a calendar to load its services.', 'h-bricks-elements' ) . '</p>';
+			echo '<p class="hbe-booking__copy">' . esc_html__( 'Booking options will appear here when available.', 'h-bricks-elements' ) . '</p>';
 		}
 
 		echo '</div>';
@@ -1171,12 +1248,12 @@ class Booking extends \Bricks\Element {
 		echo '<div class="hbe-booking__calendar-topline">';
 		echo '<div>';
 		echo '<h3 class="hbe-booking__title">';
-		echo esc_html( $has_calendar ? __( 'Select Date', 'h-bricks-elements' ) : __( 'No calendar selected', 'h-bricks-elements' ) );
+		echo esc_html( $has_calendar ? __( 'Select Date', 'h-bricks-elements' ) : __( 'Booking unavailable', 'h-bricks-elements' ) );
 		echo '</h3>';
 		echo '</div>';
 		echo '</div>';
 		echo '<p class="hbe-booking__copy">';
-		echo esc_html( $has_calendar ? __( 'Review availability below and pick the day that fits your selected service.', 'h-bricks-elements' ) : __( 'Select a calendar in Bricks Builder to populate the month view.', 'h-bricks-elements' ) );
+		echo esc_html( $has_calendar ? __( 'Review availability below and choose the day that works best for you.', 'h-bricks-elements' ) : __( 'This booking page is not ready yet.', 'h-bricks-elements' ) );
 		echo '</p>';
 		echo '</div>';
 		echo '<div class="hbe-booking__calendar-mount">';
@@ -1204,14 +1281,14 @@ class Booking extends \Bricks\Element {
 	 * @param bool $is_builder_preview Whether the element is rendered inside the Bricks builder.
 	 * @return void
 	 */
-	private function render_slots_column( string $slots_label, bool $show_summary, bool $is_builder_preview ): void {
+	private function render_slots_column( string $slots_label, bool $show_summary, string $first_column_mode, bool $is_builder_preview ): void {
 		$eyebrow = '' !== $slots_label ? $slots_label : __( 'Availability', 'h-bricks-elements' );
 
 		echo '<section class="hbe-booking__column hbe-booking__column--slots">';
 		echo '<div class="hbe-booking__eyebrow">' . esc_html( $eyebrow ) . '</div>';
 		echo '<div class="hbe-booking__slots-body">';
 		if ( $is_builder_preview ) {
-			$this->render_slots_preview_markup( $show_summary );
+			$this->render_slots_preview_markup( $show_summary, $first_column_mode );
 		} else {
 			echo '<h3 class="hbe-booking__title">' . esc_html__( 'Select a date', 'h-bricks-elements' ) . '</h3>';
 			echo '<p class="hbe-booking__copy">' . esc_html__( 'Available booking times will appear here after you choose a day.', 'h-bricks-elements' ) . '</p>';
@@ -1298,7 +1375,7 @@ class Booking extends \Bricks\Element {
 	 */
 	private function render_service_preview_markup(): void {
 		echo '<h3 class="hbe-booking__title">' . esc_html__( 'Services', 'h-bricks-elements' ) . '</h3>';
-		echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview buttons shown in the builder so you can style their states.', 'h-bricks-elements' ) . '</p>';
+		echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview service choices for styling the booking experience.', 'h-bricks-elements' ) . '</p>';
 		echo '<div class="hbe-booking__service-buttons">';
 		echo '<button type="button" class="hbe-booking__service-button is-active">';
 		echo '<span class="hbe-booking__service-name">' . esc_html__( 'Initial Consultation', 'h-bricks-elements' ) . '</span>';
@@ -1318,10 +1395,11 @@ class Booking extends \Bricks\Element {
 	 *
 	 * @return void
 	 */
-	private function render_slots_preview_markup( bool $show_summary ): void {
+	private function render_slots_preview_markup( bool $show_summary, string $first_column_mode ): void {
+		echo '<div class="hbe-booking__slots-panel is-details">';
 		echo '<div class="hbe-booking__slots-header">';
 		echo '<h3 class="hbe-booking__title">' . esc_html__( 'Available Times', 'h-bricks-elements' ) . '</h3>';
-		echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview booking slots shown in the builder.', 'h-bricks-elements' ) . '</p>';
+		echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview available times for the booking flow.', 'h-bricks-elements' ) . '</p>';
 		echo '</div>';
 		echo '<div class="hbe-booking__slot-list">';
 		echo '<button type="button" class="hbe-booking__slot-item is-selected"><span class="hbe-booking__slot-time">09:00 - 10:00</span><span class="hbe-booking__slot-date">Mar 5</span></button>';
@@ -1329,21 +1407,24 @@ class Booking extends \Bricks\Element {
 		echo '<button type="button" class="hbe-booking__slot-item"><span class="hbe-booking__slot-time">15:00 - 16:00</span><span class="hbe-booking__slot-date">Mar 5</span></button>';
 		echo '</div>';
 		echo '<div class="hbe-booking__slot-actions">';
-		echo '<button type="button" class="hbe-booking__details-button">' . esc_html__( 'Continue to Booking Details', 'h-bricks-elements' ) . '</button>';
+		echo '<button type="button" class="hbe-booking__details-button">' . esc_html__( 'Continue', 'h-bricks-elements' ) . '</button>';
 		echo '</div>';
 		echo '<div class="hbe-booking__booking-card">';
 		if ( $show_summary ) {
-			echo '<div class="hbe-booking__booking-kicker">' . esc_html__( 'Reservation Summary', 'h-bricks-elements' ) . '</div>';
-			echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Service', 'h-bricks-elements' ) . '</span><strong>' . esc_html__( 'Initial Consultation', 'h-bricks-elements' ) . '</strong></div>';
+			echo '<div class="hbe-booking__booking-kicker">' . esc_html__( 'Booking Summary', 'h-bricks-elements' ) . '</div>';
+			if ( 'service' === $first_column_mode ) {
+				echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Service', 'h-bricks-elements' ) . '</span><strong>' . esc_html__( 'Initial Consultation', 'h-bricks-elements' ) . '</strong></div>';
+			}
 			echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Date', 'h-bricks-elements' ) . '</span><strong>' . esc_html__( 'Tuesday, March 5, 2026', 'h-bricks-elements' ) . '</strong></div>';
 			echo '<div class="hbe-booking__booking-row"><span>' . esc_html__( 'Time', 'h-bricks-elements' ) . '</span><strong>09:00 - 10:00</strong></div>';
 			echo '<div class="hbe-booking__booking-row is-total"><span>' . esc_html__( 'Total Due', 'h-bricks-elements' ) . '</span><strong>$180.00</strong></div>';
 		} else {
 			echo '<div class="hbe-booking__booking-kicker">' . esc_html__( 'Booking Details', 'h-bricks-elements' ) . '</div>';
-			echo '<p class="hbe-booking__copy">' . esc_html__( 'Keep the booking form visible without the summary card details.', 'h-bricks-elements' ) . '</p>';
+			echo '<p class="hbe-booking__copy">' . esc_html__( 'Preview the focused booking form state.', 'h-bricks-elements' ) . '</p>';
 		}
-		echo '<button type="button" class="hbe-booking__confirm-button">' . esc_html__( 'Confirm Reservation', 'h-bricks-elements' ) . '</button>';
-		echo '<p class="hbe-booking__booking-policy">' . esc_html__( 'Preview content for builder styling.', 'h-bricks-elements' ) . '</p>';
+		echo '<button type="button" class="hbe-booking__confirm-button">' . esc_html__( 'Confirm Booking', 'h-bricks-elements' ) . '</button>';
+		echo '<p class="hbe-booking__booking-policy">' . esc_html__( 'Preview content for styling the public booking form.', 'h-bricks-elements' ) . '</p>';
+		echo '</div>';
 		echo '</div>';
 	}
 
@@ -1403,5 +1484,19 @@ class Booking extends \Bricks\Element {
 	 */
 	private function normalize_first_column_mode( string $mode ): string {
 		return in_array( $mode, array( 'off', 'info', 'service' ), true ) ? $mode : 'service';
+	}
+
+	/**
+	 * Normalizes the layout mode.
+	 *
+	 * @param string $mode Raw mode.
+	 * @return string
+	 */
+	private function normalize_layout_mode( string $mode ): string {
+		if ( 'stepper' === $mode ) {
+			return 'stepper';
+		}
+
+		return 'inline';
 	}
 }

@@ -62,6 +62,25 @@ class HBE_REST {
 
 		register_rest_route(
 			self::NAMESPACE,
+			'/admin/calendars/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => array( __CLASS__, 'delete_admin_calendar' ),
+					'permission_callback' => array( __CLASS__, 'can_manage_admin' ),
+					'args'                => array(
+						'id' => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
 			'/admin/calendars/(?P<id>\d+)/settings',
 			array(
 				array(
@@ -226,6 +245,23 @@ class HBE_REST {
 				),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/admin/calendars/(?P<id>\d+)/test-mail',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( __CLASS__, 'send_test_mail' ),
+				'permission_callback' => array( __CLASS__, 'can_manage_admin' ),
+				'args'                => array(
+					'id' => array(
+						'type'              => 'integer',
+						'required'          => true,
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -342,6 +378,43 @@ class HBE_REST {
 			array(
 				'item'     => self::format_calendar_item( $calendar ),
 				'settings' => HBE_Calendar_Settings::update( (int) $calendar->ID, $settings ),
+			)
+		);
+	}
+
+	/**
+	 * Deletes one admin calendar.
+	 *
+	 * @param WP_REST_Request $request Incoming request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_admin_calendar( WP_REST_Request $request ) {
+		$calendar = self::get_calendar_or_error( absint( $request['id'] ) );
+
+		if ( is_wp_error( $calendar ) ) {
+			return $calendar;
+		}
+
+		$deleted_bookings = HBE_Bookings::delete_for_calendar( (int) $calendar->ID );
+
+		if ( is_wp_error( $deleted_bookings ) ) {
+			return $deleted_bookings;
+		}
+
+		$deleted = wp_delete_post( (int) $calendar->ID, true );
+
+		if ( ! $deleted ) {
+			return new WP_Error(
+				'hbe_calendar_delete_failed',
+				__( 'Calendar could not be deleted.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return new WP_REST_Response(
+			array(
+				'deleted' => true,
+				'id'      => (int) $request['id'],
 			)
 		);
 	}
@@ -486,7 +559,7 @@ class HBE_REST {
 				'id'       => $calendar->ID,
 				'title'    => $calendar->post_title,
 				'slug'     => $calendar->post_name,
-				'settings' => HBE_Calendar_Settings::get( (int) $calendar->ID ),
+				'settings' => self::public_calendar_dto( HBE_Calendar_Settings::get( (int) $calendar->ID ) ),
 			)
 		);
 	}
@@ -558,6 +631,32 @@ class HBE_REST {
 			return $calendar;
 		}
 
+		$payload = self::get_request_payload( $request );
+
+		// Honeypot: bots fill hidden fields; legitimate users leave them empty.
+		if ( ! empty( $payload['website'] ) ) {
+			return new WP_Error(
+				'hbe_booking_rejected',
+				__( 'Booking request was rejected.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Rate limit: 5 requests per IP per calendar per 10 minutes.
+		$ip       = self::get_client_ip();
+		$rate_key = 'hbe_rl_' . md5( $ip . '_' . (int) $calendar->ID );
+		$attempts = (int) get_transient( $rate_key );
+
+		if ( $attempts >= 5 ) {
+			return new WP_Error(
+				'hbe_rate_limit',
+				__( 'Too many booking requests. Please try again later.', 'h-bricks-elements' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		set_transient( $rate_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
+
 		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
 
 		if ( ! empty( $settings['adminOnly'] ) ) {
@@ -568,7 +667,6 @@ class HBE_REST {
 			);
 		}
 
-		$payload           = self::get_request_payload( $request );
 		$payload['status'] = 'pending';
 		$booking           = HBE_Bookings::create(
 			(int) $calendar->ID,
@@ -578,6 +676,8 @@ class HBE_REST {
 		if ( is_wp_error( $booking ) ) {
 			return $booking;
 		}
+
+		HBE_Plugin::send_booking_confirmation( (int) $calendar->ID, $booking );
 
 		return new WP_REST_Response(
 			array(
@@ -594,6 +694,68 @@ class HBE_REST {
 	 */
 	public static function can_manage_admin(): bool {
 		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Sends a test email via wp_mail() using per-calendar From/subject settings.
+	 * SMTP delivery is handled by whatever mail plugin is active on the site.
+	 * The recipient is always the currently logged-in user's email address.
+	 *
+	 * @param WP_REST_Request $request Incoming request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function send_test_mail( WP_REST_Request $request ) {
+		$calendar = self::get_calendar_or_error( absint( $request['id'] ) );
+
+		if ( is_wp_error( $calendar ) ) {
+			return $calendar;
+		}
+
+		$current_user = wp_get_current_user();
+		$to           = $current_user->user_email;
+
+		if ( ! is_email( $to ) ) {
+			return new WP_Error(
+				'hbe_invalid_recipient',
+				__( 'Current user does not have a valid email address.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
+		$mail     = $settings['mailSettings'] ?? array();
+
+		if ( empty( $mail['enabled'] ) ) {
+			return new WP_Error(
+				'hbe_mail_disabled',
+				__( 'Mail is not enabled for this calendar.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+
+		if ( ! empty( $mail['fromEmail'] ) && is_email( $mail['fromEmail'] ) ) {
+			$from_name = ! empty( $mail['fromName'] ) ? $mail['fromName'] : $mail['fromEmail'];
+			$headers[] = 'From: ' . $from_name . ' <' . $mail['fromEmail'] . '>';
+		}
+
+		$sent = wp_mail(
+			$to,
+			'H-Bricks Mail Test',
+			"This is a test email sent from the H-Bricks booking plugin.\n\nIf you received this, your mail settings are working correctly.",
+			$headers
+		);
+
+		if ( ! $sent ) {
+			return new WP_Error(
+				'hbe_mail_failed',
+				__( 'Email could not be sent. Check your site mail configuration.', 'h-bricks-elements' ),
+				array( 'status' => 502 )
+			);
+		}
+
+		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
 
 	/**
@@ -631,6 +793,41 @@ class HBE_REST {
 			'slug'  => $calendar->post_name,
 			'icon'  => isset( $settings['icon'] ) ? (string) $settings['icon'] : '',
 		);
+	}
+
+	/**
+	 * Builds a public-safe settings DTO, stripping sensitive fields like mailSettings.
+	 *
+	 * @param array<string,mixed> $settings Full calendar settings.
+	 * @return array<string,mixed>
+	 */
+	private static function public_calendar_dto( array $settings ): array {
+		return array(
+			'icon'                => $settings['icon'] ?? '',
+			'publicBooking'       => $settings['publicBooking'] ?? array(),
+			'allowDoubleBookings' => $settings['allowDoubleBookings'] ?? false,
+			'adminOnly'           => $settings['adminOnly'] ?? false,
+			'slotSettings'        => $settings['slotSettings'] ?? array(),
+			'workingHours'        => $settings['workingHours'] ?? array(),
+			'services'            => $settings['services'] ?? array(),
+			'exceptions'          => $settings['exceptions'] ?? array(),
+			'selectionMode'       => $settings['selectionMode'] ?? 'single',
+		);
+	}
+
+	/**
+	 * Returns the client IP address from the TCP connection.
+	 *
+	 * @return string
+	 */
+	private static function get_client_ip(): string {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+
+		if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return $ip;
+		}
+
+		return 'unknown';
 	}
 
 	/**

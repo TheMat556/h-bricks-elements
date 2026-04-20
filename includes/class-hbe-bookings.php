@@ -263,6 +263,34 @@ class HBE_Bookings {
 	}
 
 	/**
+	 * Deletes all bookings for one calendar.
+	 *
+	 * @param int $calendar_id Calendar ID.
+	 * @return bool|WP_Error
+	 */
+	public static function delete_for_calendar( int $calendar_id ) {
+		global $wpdb;
+
+		$deleted = $wpdb->delete(
+			HBE_Bookings_Table::get_name(),
+			array(
+				'calendar_id' => $calendar_id,
+			),
+			array( '%d' )
+		);
+
+		if ( false === $deleted ) {
+			return new WP_Error(
+				'hbe_booking_delete_failed',
+				__( 'Bookings for this calendar could not be deleted.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
 	 * Returns one raw booking row.
 	 *
 	 * @param int $booking_id  Booking ID.

@@ -18,10 +18,12 @@ import {
 	Switch,
 	TimePicker,
 	Typography,
+	message,
 	theme,
 } from "antd";
 import dayjs from "dayjs";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { tr } from "./i18n";
 
 const { TextArea } = Input;
 
@@ -47,6 +49,7 @@ export interface WorkingDaySettings {
 export interface CalendarServiceSettings {
 	id: string;
 	name: string;
+	publicLabel: string;
 	duration: number;
 	prepTime: number;
 	cleanupTime: number;
@@ -62,6 +65,11 @@ export interface CalendarExceptionSettings {
 
 export interface CalendarSettings {
 	icon: string;
+	publicBooking: {
+		displayName: string;
+		defaultServiceLabel: string;
+		locationLabel: string;
+	};
 	allowDoubleBookings: boolean;
 	adminOnly: boolean;
 	slotSettings: {
@@ -86,16 +94,6 @@ export interface CalendarSettings {
 	exceptions: CalendarExceptionSettings[];
 	selectionMode: "single" | "multi";
 }
-
-const WEEKDAY_LABELS: Record<WeekdayKey, string> = {
-	monday: "Monday",
-	tuesday: "Tuesday",
-	wednesday: "Wednesday",
-	thursday: "Thursday",
-	friday: "Friday",
-	saturday: "Saturday",
-	sunday: "Sunday",
-};
 
 const CALENDAR_ICON_OPTIONS = [
 	"📅",
@@ -131,6 +129,11 @@ function createClientId(prefix: string): string {
 export function createDefaultCalendarSettings(): CalendarSettings {
 	return {
 		icon: "",
+		publicBooking: {
+			displayName: "",
+			defaultServiceLabel: "",
+			locationLabel: "",
+		},
 		allowDoubleBookings: false,
 		adminOnly: false,
 		slotSettings: {
@@ -148,7 +151,7 @@ export function createDefaultCalendarSettings(): CalendarSettings {
 			password: "",
 			fromName: "",
 			fromEmail: "",
-			subject: "Booking confirmation",
+			subject: tr("Booking confirmation"),
 		},
 		workingHours: {
 			monday: { enabled: true, intervals: [{ start: "09:00", end: "17:00" }] },
@@ -203,6 +206,7 @@ function Section({
 }
 
 export function CalendarSettingsPanel({
+	calendarId,
 	calendarName,
 	settings,
 	loading,
@@ -210,6 +214,7 @@ export function CalendarSettingsPanel({
 	onCalendarNameChange,
 	onChange,
 }: {
+	calendarId: number;
 	calendarName: string;
 	settings: CalendarSettings | null;
 	loading: boolean;
@@ -219,6 +224,19 @@ export function CalendarSettingsPanel({
 }) {
 	const { token } = theme.useToken();
 	const screens = Grid.useBreakpoint();
+	const [messageApi, messageContextHolder] = message.useMessage();
+	const [testMailTo, setTestMailTo] = useState("");
+	const [testMailLoading, setTestMailLoading] = useState(false);
+
+	const weekdayLabels: Record<WeekdayKey, string> = {
+		monday: tr("Monday"),
+		tuesday: tr("Tuesday"),
+		wednesday: tr("Wednesday"),
+		thursday: tr("Thursday"),
+		friday: tr("Friday"),
+		saturday: tr("Saturday"),
+		sunday: tr("Sunday"),
+	};
 
 	if (loading || !settings) {
 		return (
@@ -269,7 +287,9 @@ export function CalendarSettingsPanel({
 
 		setWorkingDay(weekday, {
 			...day,
-			intervals: day.intervals.filter((_, intervalIndex) => intervalIndex !== index),
+			intervals: day.intervals.filter(
+				(_, intervalIndex) => intervalIndex !== index,
+			),
 		});
 	};
 
@@ -281,6 +301,7 @@ export function CalendarSettingsPanel({
 				{
 					id: createClientId("service"),
 					name: "",
+					publicLabel: "",
 					duration: 30,
 					prepTime: 0,
 					cleanupTime: 0,
@@ -320,7 +341,9 @@ export function CalendarSettingsPanel({
 	const removeService = (index: number) => {
 		onChange({
 			...settings,
-			services: settings.services.filter((_, serviceIndex) => serviceIndex !== index),
+			services: settings.services.filter(
+				(_, serviceIndex) => serviceIndex !== index,
+			),
 		});
 	};
 
@@ -371,6 +394,49 @@ export function CalendarSettingsPanel({
 		});
 	};
 
+	const handleSendTestMail = async () => {
+		if (!testMailTo) {
+			void messageApi.warning(tr("Enter a recipient email address first."));
+			return;
+		}
+		setTestMailLoading(true);
+		try {
+			const inferredBase =
+				window.location.pathname.split("/wp-admin/")[0] ?? "";
+			const restUrl = `${window.location.origin}${inferredBase}/wp-json/hbe/v1/`;
+			const nonce =
+				(window as unknown as Record<string, unknown>).hBricksAdmin
+					?.restNonce ??
+				document
+					.getElementById("h-bricks-admin-root")
+					?.getAttribute("data-rest-nonce") ??
+				"";
+			const response = await fetch(
+				`${restUrl}admin/calendars/${calendarId}/test-mail`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-WP-Nonce": nonce as string,
+					},
+					body: JSON.stringify({ to: testMailTo }),
+				},
+			);
+			if (response.ok) {
+				void messageApi.success(tr("Test email sent successfully!"));
+			} else {
+				const body = (await response.json()) as { message?: string };
+				void messageApi.error(
+					body.message ?? tr("Failed to send test email."),
+				);
+			}
+		} catch {
+			void messageApi.error(tr("Network error while sending test email."));
+		} finally {
+			setTestMailLoading(false);
+		}
+	};
+
 	const updateSlotSettings = (
 		patch: Partial<CalendarSettings["slotSettings"]>,
 	) => {
@@ -383,18 +449,42 @@ export function CalendarSettingsPanel({
 		});
 	};
 
+	const updatePublicBooking = (
+		patch: Partial<CalendarSettings["publicBooking"]>,
+	) => {
+		onChange({
+			...settings,
+			publicBooking: {
+				...settings.publicBooking,
+				...patch,
+			},
+		});
+	};
+
 	const totalDefaultSlotDuration =
 		settings.slotSettings.sessionDuration +
 		settings.slotSettings.prepTime +
 		settings.slotSettings.cleanupTime;
+	const getBookAheadDescription = (days: number) => {
+		if (tr("Customers can book up to") === "Customers can book up to") {
+			return `Customers can book up to ${days} day${days === 1 ? "" : "s"} ahead.`;
+		}
+
+		return `Kunden koennen bis zu ${days} ${days === 1 ? "Tag" : "Tage"} im Voraus buchen.`;
+	};
+	const availabilitySwitchLabels = {
+		on: tr("On"),
+		off: tr("Off"),
+	};
 
 	return (
-		<div
-			style={{
-				minHeight: "100%",
-				padding: 24,
-			}}
-		>
+		<>
+			<div
+				style={{
+					minHeight: "100%",
+					padding: 24,
+				}}
+			>
 			<Flex vertical gap={16}>
 				<Flex
 					align="center"
@@ -408,10 +498,14 @@ export function CalendarSettingsPanel({
 				>
 					<div>
 						<Typography.Title level={4} style={{ margin: 0 }}>
-							{settings.icon ? `${settings.icon} ${calendarName}` : calendarName}
+							{settings.icon
+								? `${settings.icon} ${calendarName}`
+								: calendarName}
 						</Typography.Title>
 						<Typography.Text type="secondary">
-							Manage working hours, services, booking rules and blocked dates.
+							{tr(
+								"Manage working hours, services, booking rules and blocked dates.",
+							)}
 						</Typography.Text>
 					</div>
 				</Flex>
@@ -419,23 +513,34 @@ export function CalendarSettingsPanel({
 				{error && <Alert type="error" showIcon message={error} />}
 
 				<Section
-					title="Calendar Identity"
-					description="Change the calendar name and add a small icon or emoji to help distinguish calendars in the sidebar and future frontend views."
+					title={tr("Calendar Identity")}
+					description={tr(
+						"Keep the internal calendar name clear for your team, then choose the customer-facing labels shown in the booking flow.",
+					)}
 				>
 					<Flex vertical gap={12}>
 						<div>
-							<Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-								Calendar Name
+							<Typography.Text
+								strong
+								style={{ display: "block", marginBottom: 8 }}
+							>
+								{tr("Internal calendar name")}
 							</Typography.Text>
 							<Input
-								placeholder="Calendar name"
+								placeholder={tr("Calendar name")}
 								value={calendarName}
 								onChange={(event) => onCalendarNameChange(event.target.value)}
 							/>
 						</div>
+						<Typography.Text type="secondary">
+							{tr("Used in the admin area only. Keep it clear for your team.")}
+						</Typography.Text>
 						<div>
-							<Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-								Icon Selection
+							<Typography.Text
+								strong
+								style={{ display: "block", marginBottom: 8 }}
+							>
+								{tr("Icon Selection")}
 							</Typography.Text>
 							<div
 								style={{
@@ -472,15 +577,18 @@ export function CalendarSettingsPanel({
 									}
 									style={{ height: 44 }}
 								>
-									None
+									{tr("None")}
 								</Button>
 							</div>
-							<Typography.Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
-								Or enter a custom icon / emoji.
+							<Typography.Text
+								type="secondary"
+								style={{ display: "block", marginBottom: 8 }}
+							>
+								{tr("Or enter a custom icon / emoji.")}
 							</Typography.Text>
 							<Input
 								maxLength={12}
-								placeholder="e.g. 💇, 🦷, A"
+								placeholder={tr("e.g. 💇, 🦷, A")}
 								value={settings.icon}
 								onChange={(event) =>
 									onChange({
@@ -491,24 +599,102 @@ export function CalendarSettingsPanel({
 							/>
 						</div>
 						<Typography.Text type="secondary">
-							Leave the icon empty if you only want to show the calendar name.
+							{tr(
+								"Leave the icon empty if you only want to show the calendar name.",
+							)}
 						</Typography.Text>
+						<div
+							style={{
+								paddingTop: 12,
+								borderTop: `1px solid ${token.colorBorderSecondary}`,
+							}}
+						>
+							<Flex vertical gap={12}>
+								<div>
+									<Typography.Text
+										strong
+										style={{ display: "block", marginBottom: 8 }}
+									>
+										{tr("Public display name")}
+									</Typography.Text>
+									<Input
+										placeholder={tr("e.g. Matthias Hader")}
+										value={settings.publicBooking.displayName}
+										onChange={(event) =>
+											updatePublicBooking({
+												displayName: event.target.value,
+											})
+										}
+									/>
+									<Typography.Text type="secondary">
+										{tr(
+											"Shown to customers instead of the internal calendar name.",
+										)}
+									</Typography.Text>
+								</div>
+								<div>
+									<Typography.Text
+										strong
+										style={{ display: "block", marginBottom: 8 }}
+									>
+										{tr("Default meeting title")}
+									</Typography.Text>
+									<Input
+										placeholder={tr("e.g. Intro call")}
+										value={settings.publicBooking.defaultServiceLabel}
+										onChange={(event) =>
+											updatePublicBooking({
+												defaultServiceLabel: event.target.value,
+											})
+										}
+									/>
+									<Typography.Text type="secondary">
+										{tr("Used when no specific service title is selected.")}
+									</Typography.Text>
+								</div>
+								<div>
+									<Typography.Text
+										strong
+										style={{ display: "block", marginBottom: 8 }}
+									>
+										{tr("Meeting location")}
+									</Typography.Text>
+									<Input
+										placeholder={tr("e.g. Video call")}
+										value={settings.publicBooking.locationLabel}
+										onChange={(event) =>
+											updatePublicBooking({
+												locationLabel: event.target.value,
+											})
+										}
+									/>
+									<Typography.Text type="secondary">
+										{tr("Shown in the booking confirmation when relevant.")}
+									</Typography.Text>
+								</div>
+							</Flex>
+						</div>
 					</Flex>
 				</Section>
 
 				<Section
-					title="Booking Rules"
-					description="Define how visitors may select services and whether the calendar allows overlapping or admin-only bookings."
+					title={tr("Booking Rules")}
+					description={tr(
+						"Define how visitors may select services and whether the calendar allows overlapping or admin-only bookings.",
+					)}
 				>
 					<Flex vertical gap={18}>
 						<div>
-							<Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-								Service Selection
+							<Typography.Text
+								strong
+								style={{ display: "block", marginBottom: 8 }}
+							>
+								{tr("Service Selection")}
 							</Typography.Text>
 							<Segmented
 								options={[
-									{ label: "Single Select", value: "single" },
-									{ label: "Multi Select", value: "multi" },
+									{ label: tr("Single Select"), value: "single" },
+									{ label: tr("Multi Select"), value: "multi" },
 								]}
 								value={settings.selectionMode}
 								onChange={(value) =>
@@ -520,18 +706,15 @@ export function CalendarSettingsPanel({
 							/>
 						</div>
 
-						<Flex
-							align="center"
-							justify="space-between"
-							gap={16}
-							wrap="wrap"
-						>
+						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
 							<div style={{ maxWidth: 460 }}>
 								<Typography.Text strong style={{ display: "block" }}>
-									Allow Double Bookings
+									{tr("Allow Double Bookings")}
 								</Typography.Text>
 								<Typography.Text type="secondary">
-									If enabled, overlapping bookings may exist in the same calendar.
+									{tr(
+										"If enabled, overlapping bookings may exist in the same calendar.",
+									)}
 								</Typography.Text>
 							</div>
 							<Switch
@@ -545,18 +728,13 @@ export function CalendarSettingsPanel({
 							/>
 						</Flex>
 
-						<Flex
-							align="center"
-							justify="space-between"
-							gap={16}
-							wrap="wrap"
-						>
+						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
 							<div style={{ maxWidth: 460 }}>
 								<Typography.Text strong style={{ display: "block" }}>
-									Admin Only Bookings
+									{tr("Admin Only Bookings")}
 								</Typography.Text>
 								<Typography.Text type="secondary">
-									Reserve this calendar for admin-managed bookings only.
+									{tr("Reserve this calendar for admin-managed bookings only.")}
 								</Typography.Text>
 							</div>
 							<Switch
@@ -573,15 +751,17 @@ export function CalendarSettingsPanel({
 				</Section>
 
 				<Section
-					title="Default Slot Timing"
-					description="Define the base slot footprint and how far ahead customers are allowed to book."
+					title={tr("Default Slot Timing")}
+					description={tr(
+						"Define the base slot footprint and how far ahead customers are allowed to book.",
+					)}
 				>
 					<Flex vertical gap={16}>
 						<Flex gap={12} wrap="wrap">
 							<InputNumber
 								min={1}
 								value={settings.slotSettings.sessionDuration}
-								addonBefore="Session"
+								addonBefore={tr("Session")}
 								addonAfter="min"
 								onChange={(value) =>
 									updateSlotSettings({
@@ -592,7 +772,7 @@ export function CalendarSettingsPanel({
 							<InputNumber
 								min={0}
 								value={settings.slotSettings.prepTime}
-								addonBefore="Prep"
+								addonBefore={tr("Prep")}
 								addonAfter="min"
 								onChange={(value) =>
 									updateSlotSettings({
@@ -603,7 +783,7 @@ export function CalendarSettingsPanel({
 							<InputNumber
 								min={0}
 								value={settings.slotSettings.cleanupTime}
-								addonBefore="Cleanup"
+								addonBefore={tr("Cleanup")}
 								addonAfter="min"
 								onChange={(value) =>
 									updateSlotSettings({
@@ -614,7 +794,7 @@ export function CalendarSettingsPanel({
 							<InputNumber
 								min={0}
 								value={settings.slotSettings.maxAdvanceDays}
-								addonBefore="Book ahead"
+								addonBefore={tr("Book ahead")}
 								addonAfter="days"
 								onChange={(value) =>
 									updateSlotSettings({
@@ -626,19 +806,25 @@ export function CalendarSettingsPanel({
 						<Alert
 							type="info"
 							showIcon
-							message={`Total slot footprint: ${totalDefaultSlotDuration} minutes`}
+							message={`${tr("Total slot footprint")}: ${totalDefaultSlotDuration} ${tr("minutes")}`}
 							description={
 								settings.slotSettings.maxAdvanceDays > 0
-									? `Customers can book up to ${settings.slotSettings.maxAdvanceDays} day${settings.slotSettings.maxAdvanceDays === 1 ? "" : "s"} ahead.`
-									: "Set “Book ahead” to 0 to allow booking without an advance-day limit."
+									? getBookAheadDescription(
+											settings.slotSettings.maxAdvanceDays,
+										)
+									: tr(
+											"Set “Book ahead” to 0 to allow booking without an advance-day limit.",
+										)
 							}
 						/>
 					</Flex>
 				</Section>
 
 				<Section
-					title="Working Hours"
-					description="Configure availability per weekday. Multiple intervals per day allow lunch breaks and split shifts."
+					title={tr("Working Hours")}
+					description={tr(
+						"Configure availability per weekday. Multiple intervals per day allow lunch breaks and split shifts.",
+					)}
 				>
 					<div
 						style={{
@@ -668,11 +854,13 @@ export function CalendarSettingsPanel({
 										gap={12}
 										style={{ marginBottom: 12 }}
 									>
-										<Typography.Text strong>{WEEKDAY_LABELS[weekday]}</Typography.Text>
+										<Typography.Text strong>
+											{weekdayLabels[weekday]}
+										</Typography.Text>
 										<Switch
 											checked={day.enabled}
-											checkedChildren="Open"
-											unCheckedChildren="Closed"
+											checkedChildren={availabilitySwitchLabels.on}
+											unCheckedChildren={availabilitySwitchLabels.off}
 											onChange={(enabled) =>
 												setWorkingDay(weekday, {
 													...day,
@@ -684,7 +872,12 @@ export function CalendarSettingsPanel({
 
 									<Flex vertical gap={10}>
 										{day.intervals.map((interval, index) => (
-											<Flex key={`${weekday}-${index}`} align="center" gap={10} wrap="wrap">
+											<Flex
+												key={`${weekday}-${interval.start}-${interval.end}`}
+												align="center"
+												gap={10}
+												wrap="wrap"
+											>
 												<TimePicker
 													format="HH:mm"
 													minuteStep={15}
@@ -692,10 +885,17 @@ export function CalendarSettingsPanel({
 													style={{ minWidth: 118 }}
 													value={dayjs(`2000-01-01T${interval.start}:00`)}
 													onChange={(_, value) =>
-														updateWorkingInterval(weekday, index, "start", value)
+														updateWorkingInterval(
+															weekday,
+															index,
+															"start",
+															value,
+														)
 													}
 												/>
-												<Typography.Text type="secondary">to</Typography.Text>
+												<Typography.Text type="secondary">
+													{tr("to")}
+												</Typography.Text>
 												<TimePicker
 													format="HH:mm"
 													minuteStep={15}
@@ -718,7 +918,7 @@ export function CalendarSettingsPanel({
 
 										{day.intervals.length === 0 && (
 											<Typography.Text type="secondary">
-												No time intervals configured.
+												{tr("No time intervals configured.")}
 											</Typography.Text>
 										)}
 
@@ -728,7 +928,7 @@ export function CalendarSettingsPanel({
 											disabled={!day.enabled}
 											onClick={() => addWorkingInterval(weekday)}
 										>
-											Add Interval
+											{tr("Add Interval")}
 										</Button>
 									</Flex>
 								</div>
@@ -748,8 +948,10 @@ export function CalendarSettingsPanel({
 					}}
 				>
 					<Section
-						title="Services"
-						description="Add the services available for this calendar, including duration and optional prep / cleanup times."
+						title={tr("Services")}
+						description={tr(
+							"Add the services available for this calendar, including duration and optional prep / cleanup times.",
+						)}
 					>
 						<Flex vertical gap={14}>
 							{settings.services.map((service, index) => (
@@ -761,9 +963,16 @@ export function CalendarSettingsPanel({
 										padding: 16,
 									}}
 								>
-									<Flex justify="space-between" align="center" gap={12} style={{ marginBottom: 16 }}>
+									<Flex
+										justify="space-between"
+										align="center"
+										gap={12}
+										style={{ marginBottom: 16 }}
+									>
 										<Typography.Text strong>
-											{service.name || `Service ${index + 1}`}
+											{service.publicLabel ||
+												service.name ||
+												`${tr("Service")} ${index + 1}`}
 										</Typography.Text>
 										<Flex gap={4}>
 											<Button
@@ -789,26 +998,37 @@ export function CalendarSettingsPanel({
 
 									<Flex vertical gap={12}>
 										<Input
-											placeholder="Service name"
+											placeholder={tr("Internal service name")}
 											value={service.name}
 											onChange={(event) =>
 												updateService(index, { name: event.target.value })
+											}
+										/>
+										<Input
+											placeholder={tr("Public service title")}
+											value={service.publicLabel}
+											onChange={(event) =>
+												updateService(index, {
+													publicLabel: event.target.value,
+												})
 											}
 										/>
 										<Flex gap={12} wrap="wrap">
 											<InputNumber
 												min={1}
 												value={service.duration}
-												addonBefore="Duration"
+												addonBefore={tr("Duration")}
 												addonAfter="min"
 												onChange={(value) =>
-													updateService(index, { duration: Number(value ?? 30) })
+													updateService(index, {
+														duration: Number(value ?? 30),
+													})
 												}
 											/>
 											<InputNumber
 												min={0}
 												value={service.prepTime}
-												addonBefore="Prep"
+												addonBefore={tr("Prep")}
 												addonAfter="min"
 												onChange={(value) =>
 													updateService(index, { prepTime: Number(value ?? 0) })
@@ -817,15 +1037,17 @@ export function CalendarSettingsPanel({
 											<InputNumber
 												min={0}
 												value={service.cleanupTime}
-												addonBefore="Cleanup"
+												addonBefore={tr("Cleanup")}
 												addonAfter="min"
 												onChange={(value) =>
-													updateService(index, { cleanupTime: Number(value ?? 0) })
+													updateService(index, {
+														cleanupTime: Number(value ?? 0),
+													})
 												}
 											/>
 										</Flex>
 										<Input
-											placeholder="Price, e.g. 59 EUR"
+											placeholder={tr("Price, e.g. 59 EUR")}
 											value={service.price}
 											onChange={(event) =>
 												updateService(index, { price: event.target.value })
@@ -833,25 +1055,33 @@ export function CalendarSettingsPanel({
 										/>
 										<TextArea
 											rows={3}
-											placeholder="Short description"
+											placeholder={tr("Short description")}
 											value={service.description}
 											onChange={(event) =>
-												updateService(index, { description: event.target.value })
+												updateService(index, {
+													description: event.target.value,
+												})
 											}
 										/>
 									</Flex>
 								</div>
 							))}
 
-							<Button type="dashed" icon={<PlusOutlined />} onClick={addService}>
-								Add Service
+							<Button
+								type="dashed"
+								icon={<PlusOutlined />}
+								onClick={addService}
+							>
+								{tr("Add Service")}
 							</Button>
 						</Flex>
 					</Section>
 
 					<Section
-						title="Blocked Dates"
-						description="Add holidays or exception days that should be unavailable despite normal working hours."
+						title={tr("Blocked Dates")}
+						description={tr(
+							"Add holidays or exception days that should be unavailable despite normal working hours.",
+						)}
 					>
 						<Flex vertical gap={12}>
 							{settings.exceptions.map((exception, index) => (
@@ -875,7 +1105,7 @@ export function CalendarSettingsPanel({
 										}
 									/>
 									<Input
-										placeholder="Reason"
+										placeholder={tr("Reason")}
 										value={exception.reason}
 										style={{ minWidth: 240, flex: 1 }}
 										onChange={(event) =>
@@ -891,30 +1121,33 @@ export function CalendarSettingsPanel({
 								</Flex>
 							))}
 
-							<Button type="dashed" icon={<PlusOutlined />} onClick={addException}>
-								Add Blocked Date
+							<Button
+								type="dashed"
+								icon={<PlusOutlined />}
+								onClick={addException}
+							>
+								{tr("Add Blocked Date")}
 							</Button>
 						</Flex>
 					</Section>
 				</div>
 
 				<Section
-					title="Mail Service"
-					description="Dummy SMTP configuration for future booking confirmation emails. This stores settings only and does not send emails yet."
+					title={tr("Mail Service")}
+					description={tr(
+						"Configure SMTP for booking confirmation emails. Enable the mailer and fill in your SMTP credentials, then use the test button to verify the connection.",
+					)}
 				>
 					<Flex vertical gap={16}>
-						<Flex
-							align="center"
-							justify="space-between"
-							gap={16}
-							wrap="wrap"
-						>
+						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
 							<div style={{ maxWidth: 520 }}>
 								<Typography.Text strong style={{ display: "block" }}>
-									Enable SMTP Mailer
+									{tr("Enable SMTP Mailer")}
 								</Typography.Text>
 								<Typography.Text type="secondary">
-									Prepared for future booking confirmation emails. No mail logic is active yet.
+									{tr(
+										"Booking confirmation emails are sent via SMTP after each successful booking.",
+									)}
 								</Typography.Text>
 							</div>
 							<Switch
@@ -925,7 +1158,7 @@ export function CalendarSettingsPanel({
 
 						<Flex gap={12} wrap="wrap">
 							<Input
-								placeholder="SMTP host"
+								placeholder={tr("SMTP host")}
 								value={settings.mailSettings.host}
 								style={{ minWidth: 220, flex: 1 }}
 								onChange={(event) =>
@@ -936,7 +1169,7 @@ export function CalendarSettingsPanel({
 								min={1}
 								max={65535}
 								value={settings.mailSettings.port}
-								addonBefore="Port"
+								addonBefore={tr("Port")}
 								style={{ minWidth: 150 }}
 								onChange={(value) =>
 									updateMailSettings({ port: Number(value ?? 587) })
@@ -946,13 +1179,14 @@ export function CalendarSettingsPanel({
 								value={settings.mailSettings.encryption}
 								style={{ minWidth: 160 }}
 								options={[
-									{ label: "TLS", value: "tls" },
-									{ label: "SSL", value: "ssl" },
-									{ label: "None", value: "none" },
+									{ label: tr("TLS"), value: "tls" },
+									{ label: tr("SSL"), value: "ssl" },
+									{ label: tr("None"), value: "none" },
 								]}
 								onChange={(value) =>
 									updateMailSettings({
-										encryption: value as CalendarSettings["mailSettings"]["encryption"],
+										encryption:
+											value as CalendarSettings["mailSettings"]["encryption"],
 									})
 								}
 							/>
@@ -960,7 +1194,7 @@ export function CalendarSettingsPanel({
 
 						<Flex gap={12} wrap="wrap">
 							<Input
-								placeholder="SMTP username"
+								placeholder={tr("SMTP username")}
 								value={settings.mailSettings.username}
 								style={{ minWidth: 220, flex: 1 }}
 								onChange={(event) =>
@@ -968,7 +1202,7 @@ export function CalendarSettingsPanel({
 								}
 							/>
 							<Input.Password
-								placeholder="SMTP password"
+								placeholder={tr("SMTP password")}
 								value={settings.mailSettings.password}
 								style={{ minWidth: 220, flex: 1 }}
 								onChange={(event) =>
@@ -979,7 +1213,7 @@ export function CalendarSettingsPanel({
 
 						<Flex gap={12} wrap="wrap">
 							<Input
-								placeholder="From name"
+								placeholder={tr("From name")}
 								value={settings.mailSettings.fromName}
 								style={{ minWidth: 220, flex: 1 }}
 								onChange={(event) =>
@@ -987,7 +1221,7 @@ export function CalendarSettingsPanel({
 								}
 							/>
 							<Input
-								placeholder="From email"
+								placeholder={tr("From email")}
 								value={settings.mailSettings.fromEmail}
 								style={{ minWidth: 220, flex: 1 }}
 								onChange={(event) =>
@@ -997,15 +1231,34 @@ export function CalendarSettingsPanel({
 						</Flex>
 
 						<Input
-							placeholder="Confirmation email subject"
+							placeholder={tr("Confirmation email subject")}
 							value={settings.mailSettings.subject}
 							onChange={(event) =>
 								updateMailSettings({ subject: event.target.value })
 							}
 						/>
+
+						<Flex gap={8} align="center" wrap="wrap">
+							<Input
+								type="email"
+								placeholder={tr("Recipient address for test email")}
+								value={testMailTo}
+								onChange={(e) => setTestMailTo(e.target.value)}
+								style={{ flex: 1, minWidth: 220 }}
+							/>
+							<Button
+								onClick={() => void handleSendTestMail()}
+								loading={testMailLoading}
+								disabled={!settings.mailSettings.enabled}
+							>
+								{tr("Send Test Email")}
+							</Button>
+						</Flex>
 					</Flex>
 				</Section>
 			</Flex>
-		</div>
+			</div>
+			{messageContextHolder}
+		</>
 	);
 }
