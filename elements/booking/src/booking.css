@@ -532,7 +532,7 @@
 
 .hbe-booking__title {
 	margin: 0;
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-lg);
 	font-weight: 700;
 	line-height: 1.3;
 	letter-spacing: -0.01em;
@@ -605,7 +605,6 @@
 }
 
 .hbe-booking__column--calendar .hbe-booking__title {
-	font-size: var(--hbe-booking-fs);
 	font-weight: 700;
 	letter-spacing: -0.01em;
 	line-height: 1.3;
@@ -1001,7 +1000,6 @@
 }
 
 .hbe-booking__slots-header .hbe-booking__title {
-	font-size: var(--hbe-booking-fs);
 	font-weight: 700;
 }
 
@@ -1218,7 +1216,7 @@
 }
 
 .hbe-booking__slot-date {
-	font-size: var(--hbe-booking-fs-sm);
+	font-size: var(--hbe-booking-fs);
 	font-weight: 700;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
@@ -1460,11 +1458,11 @@
 }
 
 .hbe-booking__success-hero .hbe-booking__title {
-	font-size: var(--hbe-booking-fs-lg);
+	/* inherits fs-lg from .hbe-booking__title base */
 }
 
 .hbe-booking__success-copy {
-	font-size: var(--hbe-booking-fs-lg);
+	font-size: var(--hbe-booking-fs);
 	color: var(--hbe-booking-text-soft);
 	max-width: 18rem;
 }
@@ -1480,7 +1478,7 @@
 	background: var(--hbe-booking-surface);
 	color: var(--hbe-booking-text);
 	font: inherit;
-	font-size: var(--hbe-booking-fs-lg);
+	font-size: var(--hbe-booking-fs);
 	font-weight: 600;
 	cursor: pointer;
 	transition: var(--hbe-booking-transition);
@@ -1532,21 +1530,21 @@
 
 .hbe-booking__success-session-text {
 	margin: 0;
-	font-size: var(--hbe-booking-fs-lg);
+	font-size: var(--hbe-booking-fs);
 	font-weight: 600;
 	color: var(--hbe-booking-text);
 	line-height: 1.4;
 }
 
 .hbe-booking__success-kv-value {
-	font-size: var(--hbe-booking-fs-lg);
+	font-size: var(--hbe-booking-fs);
 	font-weight: 600;
 	color: var(--hbe-booking-text);
 	line-height: 1.4;
 }
 
 .hbe-booking__success-kv-sub {
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-sm);
 	color: var(--hbe-booking-text-muted);
 	line-height: 1.45;
 }
