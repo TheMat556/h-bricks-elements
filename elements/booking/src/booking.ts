@@ -1795,27 +1795,6 @@ function renderBookingSummaryRow(
 	`;
 }
 
-function renderBookingSummaryListRow(label: string, values: string[]): string {
-	const items = values.filter((value) => value.trim() !== "");
-
-	if (items.length === 0) {
-		return "";
-	}
-
-	return `
-		<div class="hbe-booking__booking-row is-stack">
-			<span>${escapeHtml(label)}</span>
-			<div class="hbe-booking__booking-value-list">
-				${items
-					.map(
-						(value) =>
-							`<span class="hbe-booking__booking-value-item">${escapeHtml(value)}</span>`,
-					)
-					.join("")}
-			</div>
-		</div>
-	`;
-}
 
 function getSelectedServiceLabel(state: BookingState): string | null {
 	const selectedServices = getActiveServices(state);
@@ -1973,14 +1952,6 @@ function getInitials(name: string): string {
 		.join("");
 }
 
-function renderSuccessKv(label: string, value: string): string {
-	return `
-		<div class="hbe-booking__success-kv">
-			<span class="hbe-booking__success-kv-label">${escapeHtml(label)}</span>
-			<span class="hbe-booking__success-kv-value">${escapeHtml(value)}</span>
-		</div>
-	`;
-}
 
 function renderSuccessCard(completedBooking: CompletedBookingState): string {
 	const noteItems = completedBooking.notes

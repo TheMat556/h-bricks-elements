@@ -1690,7 +1690,7 @@ export function SettingsApp() {
 
 	useEffect(() => {
 		setPrimaryColor(readShellPrimaryColor());
-	}, [themeMode]);
+	}, []);
 
 	useEffect(() => {
 		const handleStorage = (event: StorageEvent) => {
