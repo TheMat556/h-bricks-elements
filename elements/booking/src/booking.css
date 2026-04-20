@@ -1283,7 +1283,7 @@
 	gap: 0.65rem;
 	padding: 0.95rem 1rem;
 	border: 1px solid var(--hbe-booking-border-column);
-	border-radius: 0.9rem;
+	border-radius: var(--hbe-booking-radius-lg);
 	background: var(--hbe-booking-surface-low);
 }
 
@@ -1464,7 +1464,7 @@
 }
 
 .hbe-booking__success-copy {
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-lg);
 	color: var(--hbe-booking-text-soft);
 	max-width: 18rem;
 }
@@ -1480,7 +1480,7 @@
 	background: var(--hbe-booking-surface);
 	color: var(--hbe-booking-text);
 	font: inherit;
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-lg);
 	font-weight: 600;
 	cursor: pointer;
 	transition: var(--hbe-booking-transition);
@@ -1532,21 +1532,21 @@
 
 .hbe-booking__success-session-text {
 	margin: 0;
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-lg);
 	font-weight: 600;
 	color: var(--hbe-booking-text);
 	line-height: 1.4;
 }
 
 .hbe-booking__success-kv-value {
-	font-size: var(--hbe-booking-fs);
+	font-size: var(--hbe-booking-fs-lg);
 	font-weight: 600;
 	color: var(--hbe-booking-text);
 	line-height: 1.4;
 }
 
 .hbe-booking__success-kv-sub {
-	font-size: var(--hbe-booking-fs-sm);
+	font-size: var(--hbe-booking-fs);
 	color: var(--hbe-booking-text-muted);
 	line-height: 1.45;
 }
