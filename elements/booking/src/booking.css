@@ -576,6 +576,10 @@
 		filter 220ms ease;
 }
 
+.hbe-booking__slots-panel.is-details {
+	gap: 0;
+}
+
 .hbe-booking__first-body {
 	flex: 1 1 auto;
 	min-height: 0;
@@ -1224,10 +1228,20 @@
 	display: none;
 }
 
+.hbe-booking__booking-notice-wrap {
+	overflow: visible;
+	margin-bottom: 0.85rem;
+}
+
+.hbe-booking__booking-notice-wrap.is-entering {
+	overflow: hidden;
+}
+
 .hbe-booking__booking-notice {
 	padding: 0.625rem 0.75rem;
 	border-radius: 0.5rem;
 	font-size: var(--hbe-booking-fs);
+	line-height: 1.45;
 	font-weight: 600;
 }
 
@@ -1239,6 +1253,10 @@
 .hbe-booking__booking-notice.is-error {
 	background: color-mix(in srgb, var(--bricks-bg-danger, #ffe6ec) 84%, white);
 	color: var(--bricks-text-danger, #fa4362);
+}
+
+.hbe-booking__booking-notice.is-error.is-wiggling {
+	animation: hbe-booking-notice-shake 460ms 80ms ease-out;
 }
 
 .hbe-booking__booking-notice.is-info {
@@ -1797,6 +1815,28 @@
 	}
 }
 
+@keyframes hbe-booking-notice-shake {
+	0% {
+		transform: translateX(0);
+	}
+
+	25% {
+		transform: translateX(-0.24rem);
+	}
+
+	50% {
+		transform: translateX(0.2rem);
+	}
+
+	75% {
+		transform: translateX(-0.12rem);
+	}
+
+	100% {
+		transform: translateX(0);
+	}
+}
+
 @keyframes hbe-booking-slot-in {
 	from {
 		opacity: 0;
@@ -1890,7 +1930,10 @@
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-hero,
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-icon-wrap,
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-head > *,
-	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-card {
+	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-card,
+	.hbe-booking__booking-notice,
+	.hbe-booking__booking-notice.is-error,
+	.hbe-booking__booking-notice.is-error.is-wiggling {
 		animation: none !important;
 		opacity: 1 !important;
 		transform: none !important;

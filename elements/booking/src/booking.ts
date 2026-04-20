@@ -161,6 +161,8 @@ type BookingState = {
 	selectedServiceIds: Set<string>;
 	bookingForm: BookingFormState;
 	bookingNotice: BookingNotice | null;
+	bookingNoticeShouldAnimate: boolean;
+	bookingNoticeShouldWiggle: boolean;
 	bookingCompleted: boolean;
 	completedBooking: CompletedBookingState | null;
 	bookingStep: "availability" | "details";
@@ -264,6 +266,8 @@ async function initBookingElement(root: HTMLElement) {
 			notes: "",
 		},
 		bookingNotice: null,
+		bookingNoticeShouldAnimate: false,
+		bookingNoticeShouldWiggle: false,
 		bookingCompleted: false,
 		completedBooking: null,
 		bookingStep: "availability",
@@ -375,6 +379,28 @@ function isStepperMode(state: BookingState): boolean {
 
 function shouldAutoAdvanceStepper(state: BookingState): boolean {
 	return isStepperMode(state) && state.stepperAutoAdvance;
+}
+
+function getBookingNoticeKey(notice: BookingNotice | null): string | null {
+	if (!notice) {
+		return null;
+	}
+
+	return `${notice.type}:${notice.message}`;
+}
+
+function setBookingNotice(state: BookingState, notice: BookingNotice | null) {
+	const previousKey = getBookingNoticeKey(state.bookingNotice);
+	const nextKey = getBookingNoticeKey(notice);
+
+	state.bookingNoticeShouldAnimate =
+		nextKey !== null && nextKey !== previousKey;
+	// Only wiggle when the same error is already visible (re-press); first
+	// appearances trigger the wiggle via JS after the reveal animation ends.
+	state.bookingNoticeShouldWiggle = Boolean(
+		nextKey !== null && notice?.type === "error" && nextKey === previousKey,
+	);
+	state.bookingNotice = notice;
 }
 
 function resetCompletedBooking(state: BookingState) {
@@ -933,6 +959,13 @@ function setBookingStep(
 ) {
 	const previousStep = state.bookingStep;
 
+	// Entering the contact/details form should always start clean.
+	// This prevents stale validation errors from showing after navigating
+	// back to availability and then returning to details.
+	if (step === "details" && previousStep !== "details") {
+		setBookingNotice(state, null);
+	}
+
 	if (state.stepTransitionTimer !== null) {
 		window.clearTimeout(state.stepTransitionTimer);
 		state.stepTransitionTimer = null;
@@ -1007,6 +1040,135 @@ function transitionInlineBookingStep(
 		});
 	}, 180);
 }
+
+function transitionFromSuccessToAvailability(state: BookingState) {
+	if (isStepperMode(state) || !state.slotsBodyEl) {
+		resetCompletedBooking(state);
+		setBookingNotice(state, null);
+		setBookingStep(state, "availability", false);
+		if (isStepperMode(state)) {
+			const initialPanel = getInitialStepperPanel(state);
+			setStepperDirection(state, initialPanel);
+			state.stepperPanel = initialPanel;
+		}
+		renderCalendarMeta(state);
+		renderSlots(state);
+		return;
+	}
+
+	if (state.stepTransitionTimer !== null) {
+		window.clearTimeout(state.stepTransitionTimer);
+		state.stepTransitionTimer = null;
+	}
+
+	state.root.classList.remove(
+		"is-inline-transitioning-out",
+		"is-inline-transitioning-in",
+	);
+	state.root.classList.add("is-inline-transitioning-out");
+
+	state.stepTransitionTimer = window.setTimeout(() => {
+		resetCompletedBooking(state);
+		setBookingNotice(state, null);
+		setBookingStep(state, "availability", false);
+		renderCalendarMeta(state);
+		renderSlots(state);
+
+		window.requestAnimationFrame(() => {
+			state.root.classList.remove("is-inline-transitioning-out");
+			state.root.classList.add("is-inline-transitioning-in");
+			state.stepTransitionTimer = window.setTimeout(() => {
+				state.root.classList.remove("is-inline-transitioning-in");
+				state.stepTransitionTimer = null;
+			}, 420);
+		});
+	}, 180);
+}
+
+function attachNoticeAnimationCleanup(state: BookingState) {
+	if (!state.slotsBodyEl) {
+		return;
+	}
+
+	const noticeWrap = state.slotsBodyEl.querySelector<HTMLElement>(
+		".hbe-booking__booking-notice-wrap.is-entering",
+	);
+
+	if (!noticeWrap) {
+		return;
+	}
+
+	const noticeEl = noticeWrap.querySelector<HTMLElement>(
+		".hbe-booking__booking-notice.is-entering",
+	);
+
+	const cleanup = (addWiggle: boolean) => {
+		noticeWrap.classList.remove("is-entering");
+		noticeEl?.classList.remove("is-entering");
+
+		if (addWiggle && noticeEl?.classList.contains("is-error")) {
+			noticeEl.classList.add("is-wiggling");
+			noticeEl.addEventListener(
+				"animationend",
+				() => noticeEl.classList.remove("is-wiggling"),
+				{ once: true },
+			);
+		}
+	};
+
+	// Skip animation and wiggle entirely for reduced-motion users.
+	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		cleanup(false);
+		return;
+	}
+
+	// Measure the real content height before hiding so the animation
+	// ends exactly when the form reaches its final position — no overshoot.
+	const targetH = noticeWrap.scrollHeight;
+	const targetMarginBottom = parseFloat(
+		getComputedStyle(noticeWrap).marginBottom,
+	);
+
+	// Hide synchronously (before first paint) so the WAAPI start frame
+	// matches what the user never sees.
+	noticeWrap.style.maxHeight = "0px";
+	noticeWrap.style.marginBottom = "0px";
+	noticeWrap.style.opacity = "0";
+	noticeWrap.style.transform = "translateY(-0.6rem)";
+
+	const expand = noticeWrap.animate(
+		[
+			{
+				maxHeight: "0px",
+				marginBottom: "0px",
+				opacity: "0",
+				transform: "translateY(-0.6rem)",
+			},
+			{
+				maxHeight: `${targetH}px`,
+				marginBottom: `${targetMarginBottom}px`,
+				opacity: "1",
+				transform: "translateY(0)",
+			},
+		],
+		{
+			duration: 300,
+			easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+			fill: "forwards",
+		},
+	);
+
+	expand.addEventListener("finish", () => {
+		// Cancel fill so CSS takes back control of all properties.
+		expand.cancel();
+		noticeWrap.style.maxHeight = "";
+		noticeWrap.style.marginBottom = "";
+		noticeWrap.style.opacity = "";
+		noticeWrap.style.transform = "";
+		cleanup(true);
+	});
+}
+
 
 function renderCalendarMeta(state: BookingState) {
 	const calendar = state.calendar;
@@ -1211,10 +1373,10 @@ async function toggleServiceSelection(state: BookingState, serviceId: string) {
 			state.selectedServiceIds.add(serviceId);
 		}
 	} else {
-		state.selectedServiceIds = new Set([serviceId]);
+	state.selectedServiceIds = new Set([serviceId]);
 	}
 
-	state.bookingNotice = null;
+	setBookingNotice(state, null);
 	resetCompletedBooking(state);
 	setBookingStep(state, "availability");
 	renderServicesColumn(state);
@@ -1348,7 +1510,7 @@ function mountCalendar(state: BookingState) {
 
 				state.selectedDate = clickedDate;
 				state.selectedSlot = null;
-				state.bookingNotice = null;
+				setBookingNotice(state, null);
 				resetCompletedBooking(state);
 				setBookingStep(state, "availability");
 				if (shouldAutoAdvanceStepper(state) && state.showSlots) {
@@ -1417,13 +1579,13 @@ async function navigateCalendarMonth(state: BookingState, delta: number) {
 		renderCalendarMeta(state);
 		renderSlots(state);
 	} catch (error) {
-		state.bookingNotice = {
+		setBookingNotice(state, {
 			type: "error",
 			message:
 				error instanceof Error
 					? error.message
 					: "Bookings could not be refreshed.",
-		};
+		});
 		renderSlots(state);
 	}
 }
@@ -1509,7 +1671,11 @@ function renderSlots(state: BookingState) {
 	const priceLabel = getSelectedPriceLabel(state);
 	const serviceLabel = getSelectedServiceLabel(state);
 	const noticeMarkup = state.bookingNotice
-		? `<div class="hbe-booking__booking-notice is-${escapeAttribute(state.bookingNotice.type)}">${escapeHtml(state.bookingNotice.message)}</div>`
+		? `<div class="hbe-booking__booking-notice-wrap${state.bookingNoticeShouldAnimate ? " is-entering" : ""}">
+			<div class="hbe-booking__booking-notice is-${escapeAttribute(state.bookingNotice.type)}${state.bookingNoticeShouldAnimate ? " is-entering" : ""}${state.bookingNoticeShouldWiggle ? " is-wiggling" : ""}">
+				${escapeHtml(state.bookingNotice.message)}
+			</div>
+		</div>`
 		: "";
 
 	if (state.bookingCompleted && state.completedBooking) {
@@ -1562,6 +1728,9 @@ function renderSlots(state: BookingState) {
 			"details",
 		);
 
+		attachNoticeAnimationCleanup(state);
+		state.bookingNoticeShouldAnimate = false;
+		state.bookingNoticeShouldWiggle = false;
 		attachSlotInteractions(state, availableSlots);
 		syncStepperUI(state);
 		return;
@@ -1573,7 +1742,6 @@ function renderSlots(state: BookingState) {
 			`
 				<h3 class="hbe-booking__title">${escapeHtml(dateHeading)}</h3>
 				<p class="hbe-booking__copy">No times are available on this date.</p>
-				${noticeMarkup}
 			`,
 			"availability",
 		);
@@ -1636,7 +1804,6 @@ function renderSlots(state: BookingState) {
 					Continue
 				</button>
 			</div>
-			${noticeMarkup}
 		`,
 		"availability",
 	);
@@ -2089,7 +2256,7 @@ function attachSlotInteractions(state: BookingState, slots: BookingSlot[]) {
 				}
 
 				state.selectedSlot = slot;
-				state.bookingNotice = null;
+				setBookingNotice(state, null);
 				resetCompletedBooking(state);
 				if (shouldAutoAdvanceStepper(state)) {
 					setStepperDirection(state, "details");
@@ -2168,16 +2335,7 @@ function attachSlotInteractions(state: BookingState, slots: BookingSlot[]) {
 	state.slotsBodyEl
 		.querySelector<HTMLButtonElement>("[data-booking-reset]")
 		?.addEventListener("click", () => {
-			resetCompletedBooking(state);
-			state.bookingNotice = null;
-			setBookingStep(state, "availability", false);
-			if (isStepperMode(state)) {
-				const initialPanel = getInitialStepperPanel(state);
-				setStepperDirection(state, initialPanel);
-				state.stepperPanel = initialPanel;
-			}
-			renderCalendarMeta(state);
-			renderSlots(state);
+			transitionFromSuccessToAvailability(state);
 		});
 
 	attachTimeFormatToggle(state);
@@ -2190,34 +2348,34 @@ async function submitPublicBooking(state: BookingState) {
 	}
 
 	if (!state.calendar || !state.selectedDate || !state.selectedSlot) {
-		state.bookingNotice = {
+		setBookingNotice(state, {
 			type: "error",
 			message: "Select a date and time slot first.",
-		};
+		});
 		renderSlots(state);
 		return;
 	}
 
 	if (state.bookingForm.name.trim() === "") {
-		state.bookingNotice = {
+		setBookingNotice(state, {
 			type: "error",
 			message: "Enter your name to confirm the booking.",
-		};
+		});
 		renderSlots(state);
 		return;
 	}
 
 	if (state.bookingForm.email.trim() === "") {
-		state.bookingNotice = {
+		setBookingNotice(state, {
 			type: "error",
 			message: "Enter your email to confirm the booking.",
-		};
+		});
 		renderSlots(state);
 		return;
 	}
 
 	state.isSubmittingBooking = true;
-	state.bookingNotice = null;
+	setBookingNotice(state, null);
 	dispatchBookingEvent(state, "submit", {
 		start: state.selectedSlot.start,
 		end: state.selectedSlot.end,
@@ -2298,7 +2456,7 @@ async function submitPublicBooking(state: BookingState) {
 			phone: "",
 			notes: "",
 		};
-		state.bookingNotice = null;
+		setBookingNotice(state, null);
 		state.calendarInstance?.redraw();
 		dispatchBookingEvent(state, "success", {
 			bookingId: booking.id,
@@ -2312,10 +2470,10 @@ async function submitPublicBooking(state: BookingState) {
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Booking could not be created.";
-		state.bookingNotice = {
+		setBookingNotice(state, {
 			type: "error",
 			message,
-		};
+		});
 		dispatchBookingEvent(state, "error", {
 			message,
 			serviceIds: Array.from(state.selectedServiceIds),
