@@ -1376,6 +1376,8 @@
 
 .hbe-booking__booking-card--success {
 	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
 	align-items: stretch;
 	width: 100%;
 	max-width: none;
