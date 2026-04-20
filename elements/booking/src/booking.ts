@@ -1988,9 +1988,12 @@ function renderSuccessSummary(completedBooking: CompletedBookingState): string {
 		<div class="hbe-booking__booking-summary hbe-booking__booking-summary--success">
 			<div class="hbe-booking__booking-kicker">Booking details</div>
 			${renderBookingSummaryRow("What", completedBooking.whatLabel)}
+			${completedBooking.hostLabel ? renderBookingSummaryRow("With", completedBooking.hostLabel) : ""}
 			${renderBookingSummaryListRow("When", whenItems)}
 			${completedBooking.locationLabel ? renderBookingSummaryRow("Where", completedBooking.locationLabel) : ""}
-			${noteItems.length > 0 ? renderBookingSummaryListRow("Additional notes", noteItems) : ""}
+			${renderBookingSummaryRow("Name", completedBooking.customerName)}
+			${completedBooking.customerEmail ? renderBookingSummaryRow("Email", completedBooking.customerEmail) : ""}
+			${noteItems.length > 0 ? renderBookingSummaryListRow("Notes", noteItems) : ""}
 		</div>
 		<div class="hbe-booking__booking-support">
 			<p class="hbe-booking__booking-support-copy">${escapeHtml(supportCopy)}</p>
