@@ -1989,24 +1989,24 @@ function renderSuccessCard(completedBooking: CompletedBookingState): string {
 		.filter(Boolean);
 	const initials = getInitials(completedBooking.customerName);
 
-	const sessionRows = [
-		renderSuccessKv("Event", completedBooking.whatLabel),
-		completedBooking.hostLabel
-			? renderSuccessKv("With", completedBooking.hostLabel)
-			: "",
-		completedBooking.locationLabel
-			? renderSuccessKv("Where", completedBooking.locationLabel)
-			: "",
-	].join("");
+	const sessionText = completedBooking.hostLabel
+		? `${completedBooking.whatLabel} with ${completedBooking.hostLabel}`
+		: completedBooking.whatLabel;
+
+	const timeLine = completedBooking.timeZoneLabel
+		? `${completedBooking.timeLabel} · ${completedBooking.timeZoneLabel}`
+		: completedBooking.timeLabel;
+
+	const locationSection = completedBooking.locationLabel
+		? `<span class="hbe-booking__success-kv-sub">${escapeHtml(completedBooking.locationLabel)}</span>`
+		: "";
 
 	const notesSection =
 		noteItems.length > 0
 			? `
 		<div class="hbe-booking__success-section">
 			<span class="hbe-booking__success-section-label">Notes</span>
-			<div class="hbe-booking__success-section-body">
-				${noteItems.map((n) => `<span class="hbe-booking__success-kv-value">${escapeHtml(n)}</span>`).join("")}
-			</div>
+			${noteItems.map((n) => `<span class="hbe-booking__success-kv-value">${escapeHtml(n)}</span>`).join("")}
 		</div>`
 			: "";
 
@@ -2014,17 +2014,13 @@ function renderSuccessCard(completedBooking: CompletedBookingState): string {
 		<div class="hbe-booking__success-card">
 			<div class="hbe-booking__success-section">
 				<span class="hbe-booking__success-section-label">Session</span>
-				<div class="hbe-booking__success-section-body">
-					${sessionRows}
-				</div>
+				<p class="hbe-booking__success-session-text">${escapeHtml(sessionText)}</p>
+				${locationSection}
 			</div>
 			<div class="hbe-booking__success-section">
-				<span class="hbe-booking__success-section-label">When</span>
-				<div class="hbe-booking__success-section-body">
-					<span class="hbe-booking__success-kv-value">${escapeHtml(completedBooking.dateHeading)}</span>
-					<span class="hbe-booking__success-kv-value">${escapeHtml(completedBooking.timeLabel)}</span>
-					<span class="hbe-booking__success-kv-sub">${escapeHtml(completedBooking.timeZoneLabel)}</span>
-				</div>
+				<span class="hbe-booking__success-section-label">Date &amp; Time</span>
+				<span class="hbe-booking__success-kv-value">${escapeHtml(completedBooking.dateHeading)}</span>
+				<span class="hbe-booking__success-kv-sub">${escapeHtml(timeLine)}</span>
 			</div>
 			<div class="hbe-booking__success-section">
 				<span class="hbe-booking__success-section-label">Participant</span>
@@ -2045,36 +2041,29 @@ function renderSuccessPanel(state: BookingState): string {
 	const title = state.successTitle.trim() || "Booking Confirmed";
 	const copy =
 		state.successText.trim() ||
-		"Your appointment is secured. A confirmation email with all the details has been sent to your inbox.";
+		"Your meeting has been successfully scheduled.";
 	const buttonLabel = state.successButtonLabel.trim() || "Book another time";
 	const completedBooking = state.completedBooking;
-	const supportCopy = completedBooking?.hostEmail
-		? `Need to make a change? Contact ${completedBooking.hostEmail} to reschedule or cancel.`
-		: "Need to make a change? Use the link in your confirmation email.";
 
 	return `
 		<div class="hbe-booking__booking-card hbe-booking__booking-card--success">
 			<div class="hbe-booking__success-hero">
+				<div class="hbe-booking__success-icon-wrap">
+					<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+						<path d="M5 12.5 9.5 17 19 7.5"></path>
+					</svg>
+				</div>
 				<div class="hbe-booking__success-head">
-					<div class="hbe-booking__success-badge">
-						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-							<path d="M5 12.5 9.5 17 19 7.5"></path>
-						</svg>
-						Confirmed
-					</div>
 					<h3 class="hbe-booking__title">${escapeHtml(title)}</h3>
 					<p class="hbe-booking__copy hbe-booking__success-copy">${escapeHtml(copy)}</p>
 				</div>
-				<div class="hbe-booking__success-actions">
-					<button
-						type="button"
-						class="hbe-booking__success-cta"
-						data-booking-reset="true"
-					>
-						${escapeHtml(buttonLabel)}
-					</button>
-					<p class="hbe-booking__success-support-note">${escapeHtml(supportCopy)}</p>
-				</div>
+				<button
+					type="button"
+					class="hbe-booking__success-cta"
+					data-booking-reset="true"
+				>
+					${escapeHtml(buttonLabel)}
+				</button>
 			</div>
 			${completedBooking ? renderSuccessCard(completedBooking) : ""}
 		</div>

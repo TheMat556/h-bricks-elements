@@ -299,7 +299,7 @@
 	border-left: 0;
 	width: 100%;
 	max-width: none;
-	padding-inline: clamp(1.25rem, 4vw, 2rem);
+	padding: 0;
 }
 
 .hbe-booking[data-booking-state="success"] .hbe-booking__slots-panel {
@@ -1381,7 +1381,7 @@
 	align-items: stretch;
 	width: 100%;
 	max-width: none;
-	gap: 1.25rem;
+	gap: 0;
 	margin-inline: 0;
 	height: 100%;
 	overflow: hidden;
@@ -1392,7 +1392,7 @@
 		both;
 }
 
-.hbe-booking__booking-card--success.is-entering .hbe-booking__success-badge {
+.hbe-booking__booking-card--success.is-entering .hbe-booking__success-icon-wrap {
 	animation: hbe-booking-success-icon-pop 680ms
 		cubic-bezier(0.18, 0.9, 0.22, 1.18) 120ms both;
 }
@@ -1414,17 +1414,41 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: 1rem;
-	flex: 0 0 40%;
+	align-items: center;
+	text-align: center;
+	gap: 1.5rem;
+	flex: 1;
 	min-width: 0;
-	padding-right: 1.25rem;
+	padding: clamp(2rem, 5vw, 2.75rem) clamp(1.5rem, 4vw, 2.5rem);
 	border-right: 1px solid var(--hbe-booking-border-column);
+}
+
+.hbe-booking__success-icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 4.5rem;
+	height: 4.5rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--hbe-booking-primary) 12%, white);
+}
+
+.hbe-booking__success-icon-wrap svg {
+	width: 2rem;
+	height: 2rem;
+	stroke: var(--hbe-booking-primary);
+	fill: none;
+	stroke-width: 2.2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 }
 
 .hbe-booking__success-head {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	align-items: center;
+	gap: 0.4rem;
 }
 
 .hbe-booking__success-head > :nth-child(1) {
@@ -1435,50 +1459,14 @@
 	animation-delay: 150ms;
 }
 
-.hbe-booking__success-head > :nth-child(3) {
-	animation-delay: 220ms;
-}
-
 .hbe-booking__success-hero .hbe-booking__title {
 	font-size: var(--hbe-booking-fs-lg);
 }
 
-.hbe-booking__success-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4rem;
-	width: fit-content;
-	padding: 0.25rem 0.65rem 0.25rem 0.5rem;
-	border-radius: 999px;
-	background: color-mix(in srgb, var(--hbe-booking-primary) 14%, white);
-	color: var(--hbe-booking-primary-strong);
-	font-size: var(--hbe-booking-fs-xs);
-	font-weight: 800;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-}
-
-.hbe-booking__success-badge svg {
-	width: 1.1em;
-	height: 1.1em;
-	stroke: currentcolor;
-	stroke-width: 2.6;
-	fill: none;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-	flex-shrink: 0;
-}
-
 .hbe-booking__success-copy {
-	max-width: 22rem;
 	font-size: var(--hbe-booking-fs-sm);
-}
-
-.hbe-booking__success-actions {
-	display: flex;
-	flex-direction: column;
-	gap: 0.55rem;
-	margin-top: 0.2rem;
+	color: var(--hbe-booking-text-soft);
+	max-width: 18rem;
 }
 
 .hbe-booking__success-cta {
@@ -1486,27 +1474,25 @@
 	align-items: center;
 	justify-content: center;
 	width: fit-content;
-	padding: 0.6rem 1.4rem;
-	border: 0;
-	border-radius: 999px;
-	background: var(--hbe-booking-primary);
-	color: white;
+	padding: 0.65rem 1.5rem;
+	border: 1px solid var(--hbe-booking-border-column);
+	border-radius: 0.75rem;
+	background: var(--hbe-booking-surface);
+	color: var(--hbe-booking-text);
 	font: inherit;
 	font-size: var(--hbe-booking-fs-sm);
-	font-weight: 700;
-	letter-spacing: 0;
+	font-weight: 600;
 	cursor: pointer;
 	transition: var(--hbe-booking-transition);
 }
 
 .hbe-booking__success-cta:hover {
-	filter: brightness(1.1);
+	background: var(--hbe-booking-surface-low);
 	transform: translateY(-1px);
 }
 
 .hbe-booking__success-cta:active {
 	transform: translateY(0);
-	filter: brightness(0.96);
 }
 
 .hbe-booking__success-cta:focus-visible {
@@ -1514,25 +1500,19 @@
 	box-shadow: var(--hbe-booking-ring);
 }
 
-.hbe-booking__success-support-note {
-	margin: 0;
-	font-size: var(--hbe-booking-fs-xs);
-	line-height: 1.55;
-	color: var(--hbe-booking-text-muted);
-	max-width: 20rem;
-}
-
 /* --- Right: details card --------------------------------------------------- */
 
 .hbe-booking__success-card {
 	display: flex;
 	flex-direction: column;
-	gap: 1.1rem;
+	justify-content: center;
+	gap: 2rem;
 	flex: 1;
 	min-width: 0;
 	min-height: 0;
 	overflow-y: auto;
-	padding-right: 0.15rem;
+	padding: clamp(2rem, 5vw, 2.75rem) clamp(1.5rem, 4vw, 2.5rem);
+	background: var(--hbe-booking-surface-low);
 }
 
 .hbe-booking__success-section {
@@ -1547,28 +1527,15 @@
 	letter-spacing: 0.07em;
 	text-transform: uppercase;
 	color: var(--hbe-booking-text-soft);
-	padding-inline: 0.1rem;
+	margin-bottom: 0.1rem;
 }
 
-.hbe-booking__success-section-body {
-	display: flex;
-	flex-direction: column;
-	gap: 0.3rem;
-	padding: 0.65rem 0.8rem;
-	border: 1px solid var(--hbe-booking-border-column);
-	border-radius: 0.75rem;
-	background: var(--hbe-booking-surface-low);
-}
-
-.hbe-booking__success-kv {
-	display: flex;
-	flex-direction: column;
-	gap: 0.05rem;
-}
-
-.hbe-booking__success-kv-label {
-	font-size: var(--hbe-booking-fs-xs);
-	color: var(--hbe-booking-text-muted);
+.hbe-booking__success-session-text {
+	margin: 0;
+	font-size: var(--hbe-booking-fs-sm);
+	font-weight: 600;
+	color: var(--hbe-booking-text);
+	line-height: 1.4;
 }
 
 .hbe-booking__success-kv-value {
@@ -1589,10 +1556,7 @@
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
-	padding: 0.55rem 0.8rem;
-	border: 1px solid var(--hbe-booking-border-column);
-	border-radius: 0.75rem;
-	background: var(--hbe-booking-surface-low);
+	margin-top: 0.1rem;
 }
 
 .hbe-booking__success-avatar {
@@ -1600,8 +1564,8 @@
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	width: 2.1rem;
-	height: 2.1rem;
+	width: 2.25rem;
+	height: 2.25rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--hbe-booking-primary) 18%, white);
 	color: var(--hbe-booking-primary-strong);
@@ -1926,7 +1890,7 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-hero,
-	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-badge,
+	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-icon-wrap,
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-head > *,
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-card {
 		animation: none !important;
@@ -2067,8 +2031,7 @@
 	}
 
 	.hbe-booking__success-hero {
-		flex: none;
-		padding-right: 0;
+		flex: 1;
 	}
 
 	.hbe-booking__success-copy {
