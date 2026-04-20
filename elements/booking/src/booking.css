@@ -69,10 +69,10 @@
 	--hbe-booking-ring: 0 0 0 4px
 		color-mix(in srgb, var(--hbe-booking-primary) 24%, transparent);
 	--hbe-booking-panel-min-height: clamp(42rem, 84vh, 52rem);
-	--hbe-booking-fs: clamp(1.35rem, calc(-0.07vw + 1.44rem), 1.42rem);
-	--hbe-booking-fs-sm: calc(var(--hbe-booking-fs) * 0.82);
-	--hbe-booking-fs-xs: calc(var(--hbe-booking-fs) * 0.72);
-	--hbe-booking-fs-lg: calc(var(--hbe-booking-fs) * 1.15);
+	--hbe-booking-fs: 1em;
+	--hbe-booking-fs-sm: 0.875em;
+	--hbe-booking-fs-xs: 0.72em;
+	--hbe-booking-fs-lg: 1.15em;
 	display: grid;
 	position: relative;
 	width: 100%;
@@ -88,8 +88,6 @@
 	align-items: stretch;
 	color: var(--hbe-booking-text);
 	font-family: inherit;
-	font-size: var(--hbe-booking-fs);
-	line-height: 1.5;
 	background: white;
 	border-radius: 0.75rem;
 	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -436,7 +434,8 @@
 }
 
 .hbe-booking.is-transitioning-to-details .hbe-booking__slots-panel {
-	animation: hbe-booking-pane-enter 340ms 180ms cubic-bezier(0.4, 0, 0.2, 1) backwards;
+	animation: hbe-booking-pane-enter 340ms 180ms cubic-bezier(0.4, 0, 0.2, 1)
+		backwards;
 }
 
 .hbe-booking.is-transitioning-to-availability .hbe-booking__slots-panel {
@@ -630,7 +629,7 @@
 }
 
 .hbe-booking__status-label {
-	font-size: var(--hbe-booking-fs-xs);
+	font-size: 0.5em;
 	font-weight: 800;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
@@ -638,7 +637,7 @@
 }
 
 .hbe-booking__status-title {
-	font-size: var(--hbe-booking-fs);
+	font-size: 0.75em;
 	font-weight: 700;
 	line-height: 1.35;
 	color: var(--hbe-booking-text);
@@ -672,12 +671,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.95rem;
-}
-
-.hbe-booking__panel-intro {
-	display: flex;
-	flex-direction: column;
-	gap: 0.35rem;
 }
 
 .hbe-booking__first-layout {
@@ -732,7 +725,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 0.3rem;
+	gap: 0.45rem;
 	width: 100%;
 	padding: 1rem 1rem 0.875rem;
 	border: 2px solid transparent;
@@ -762,29 +755,29 @@
 
 .hbe-booking__service-name {
 	max-width: 100%;
-	font-size: var(--hbe-booking-fs);
+	font-size: inherit;
 	font-weight: 700;
-	line-height: 1.25;
+	line-height: 1.35;
 }
 
 .hbe-booking__service-meta {
-	font-size: var(--hbe-booking-fs);
-	font-weight: 700;
-	letter-spacing: 0.08em;
+	font-size: inherit;
+	font-weight: 600;
+	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	color: var(--hbe-booking-text-soft);
 }
 
 .hbe-booking__service-copy {
-	font-size: var(--hbe-booking-fs-sm);
-	line-height: 1.55;
+	font-size: inherit;
+	line-height: 1.6;
 	color: var(--hbe-booking-text-muted);
-	display: none;
+	display: block;
 }
 
 .hbe-booking__service-price {
 	margin-top: 0.2rem;
-	font-size: var(--hbe-booking-fs);
+	font-size: inherit;
 	font-weight: 700;
 	color: var(--hbe-booking-primary-strong);
 }
@@ -1182,9 +1175,9 @@
 }
 
 .hbe-booking__slot-time {
-	font-size: var(--hbe-booking-fs);
-	font-weight: 700;
-	letter-spacing: -0.01em;
+	font-size: 1em;
+	font-weight: 400;
+	letter-spacing: 0;
 	color: var(--hbe-booking-text);
 	white-space: nowrap;
 }
@@ -1404,11 +1397,12 @@
 }
 
 .hbe-booking__booking-card--success.is-entering .hbe-booking__success-hero {
-	animation: hbe-booking-success-panel-in 440ms 60ms cubic-bezier(0.4, 0, 0.2, 1)
-		both;
+	animation: hbe-booking-success-panel-in 440ms 60ms
+		cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-.hbe-booking__booking-card--success.is-entering .hbe-booking__success-icon-wrap {
+.hbe-booking__booking-card--success.is-entering
+	.hbe-booking__success-icon-wrap {
 	animation: hbe-booking-success-icon-pop 680ms
 		cubic-bezier(0.18, 0.9, 0.22, 1.18) 120ms both;
 }
@@ -1596,8 +1590,6 @@
 	gap: 0.05rem;
 	min-width: 0;
 }
-
-
 
 .hbe-booking__booking-fields {
 	display: grid;
@@ -1928,8 +1920,11 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-hero,
-	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-icon-wrap,
-	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-head > *,
+	.hbe-booking__booking-card--success.is-entering
+		.hbe-booking__success-icon-wrap,
+	.hbe-booking__booking-card--success.is-entering
+		.hbe-booking__success-head
+		> *,
 	.hbe-booking__booking-card--success.is-entering .hbe-booking__success-card,
 	.hbe-booking__booking-notice,
 	.hbe-booking__booking-notice.is-error,

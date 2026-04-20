@@ -259,6 +259,14 @@ class HBE_REST {
 						'required'          => true,
 						'sanitize_callback' => 'absint',
 					),
+					'to' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_email',
+						'validate_callback' => function ( $value ) {
+							return empty( $value ) || is_email( $value );
+						},
+					),
 				),
 			)
 		);
@@ -699,7 +707,7 @@ class HBE_REST {
 	/**
 	 * Sends a test email via wp_mail() using per-calendar From/subject settings.
 	 * SMTP delivery is handled by whatever mail plugin is active on the site.
-	 * The recipient is always the currently logged-in user's email address.
+	 * Sends to the provided address, or falls back to the logged-in user's email.
 	 *
 	 * @param WP_REST_Request $request Incoming request.
 	 * @return WP_REST_Response|WP_Error
@@ -711,29 +719,26 @@ class HBE_REST {
 			return $calendar;
 		}
 
-		$current_user = wp_get_current_user();
-		$to           = $current_user->user_email;
+		$to_param = ! empty( $request['to'] ) ? sanitize_email( (string) $request['to'] ) : '';
+
+		if ( $to_param && is_email( $to_param ) ) {
+			$to = $to_param;
+		} else {
+			$current_user = wp_get_current_user();
+			$to           = $current_user->user_email;
+		}
 
 		if ( ! is_email( $to ) ) {
 			return new WP_Error(
 				'hbe_invalid_recipient',
-				__( 'Current user does not have a valid email address.', 'h-bricks-elements' ),
+				__( 'No valid recipient email address. Enter one in the test field or ensure your WordPress user has a valid email.', 'h-bricks-elements' ),
 				array( 'status' => 400 )
 			);
 		}
 
 		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
 		$mail     = $settings['mailSettings'] ?? array();
-
-		if ( empty( $mail['enabled'] ) ) {
-			return new WP_Error(
-				'hbe_mail_disabled',
-				__( 'Mail is not enabled for this calendar.', 'h-bricks-elements' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+		$headers  = array( 'Content-Type: text/plain; charset=UTF-8' );
 
 		if ( ! empty( $mail['fromEmail'] ) && is_email( $mail['fromEmail'] ) ) {
 			$from_name = ! empty( $mail['fromName'] ) ? $mail['fromName'] : $mail['fromEmail'];
@@ -743,7 +748,7 @@ class HBE_REST {
 		$sent = wp_mail(
 			$to,
 			'H-Bricks Mail Test',
-			"This is a test email sent from the H-Bricks booking plugin.\n\nIf you received this, your mail settings are working correctly.",
+			"This is a test email sent from the H-Bricks booking plugin.\n\nIf you received this, your WordPress mail configuration is working correctly.",
 			$headers
 		);
 
@@ -755,7 +760,7 @@ class HBE_REST {
 			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true ), 200 );
+		return new WP_REST_Response( array( 'success' => true, 'to' => $to ), 200 );
 	}
 
 	/**

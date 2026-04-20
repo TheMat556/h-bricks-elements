@@ -1573,6 +1573,8 @@ function App() {
 									settings={calendarSettings}
 									loading={settingsLoading}
 									error={settingsError}
+									restUrl={getAdminApiConfig().restUrl}
+									restNonce={getAdminApiConfig().restNonce}
 									onCalendarNameChange={handleCalendarTitleChange}
 									onChange={handleSettingsChange}
 								/>

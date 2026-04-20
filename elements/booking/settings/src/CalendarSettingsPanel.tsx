@@ -80,11 +80,6 @@ export interface CalendarSettings {
 	};
 	mailSettings: {
 		enabled: boolean;
-		host: string;
-		port: number;
-		encryption: "none" | "ssl" | "tls";
-		username: string;
-		password: string;
 		fromName: string;
 		fromEmail: string;
 		subject: string;
@@ -144,11 +139,6 @@ export function createDefaultCalendarSettings(): CalendarSettings {
 		},
 		mailSettings: {
 			enabled: false,
-			host: "",
-			port: 587,
-			encryption: "tls",
-			username: "",
-			password: "",
 			fromName: "",
 			fromEmail: "",
 			subject: tr("Booking confirmation"),
@@ -211,6 +201,8 @@ export function CalendarSettingsPanel({
 	settings,
 	loading,
 	error,
+	restUrl,
+	restNonce,
 	onCalendarNameChange,
 	onChange,
 }: {
@@ -219,6 +211,8 @@ export function CalendarSettingsPanel({
 	settings: CalendarSettings | null;
 	loading: boolean;
 	error: string;
+	restUrl: string;
+	restNonce: string;
 	onCalendarNameChange: (nextName: string) => void;
 	onChange: (nextSettings: CalendarSettings) => void;
 }) {
@@ -401,29 +395,24 @@ export function CalendarSettingsPanel({
 		}
 		setTestMailLoading(true);
 		try {
-			const inferredBase =
-				window.location.pathname.split("/wp-admin/")[0] ?? "";
-			const restUrl = `${window.location.origin}${inferredBase}/wp-json/hbe/v1/`;
-			const nonce =
-				(window as unknown as Record<string, unknown>).hBricksAdmin
-					?.restNonce ??
-				document
-					.getElementById("h-bricks-admin-root")
-					?.getAttribute("data-rest-nonce") ??
-				"";
 			const response = await fetch(
 				`${restUrl}admin/calendars/${calendarId}/test-mail`,
 				{
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
-						"X-WP-Nonce": nonce as string,
+						"X-WP-Nonce": restNonce,
 					},
 					body: JSON.stringify({ to: testMailTo }),
 				},
 			);
 			if (response.ok) {
-				void messageApi.success(tr("Test email sent successfully!"));
+				const body = (await response.json()) as { to?: string };
+				void messageApi.success(
+					body.to
+						? tr("Test email sent to {to}!").replace("{to}", body.to)
+						: tr("Test email sent successfully!"),
+				);
 			} else {
 				const body = (await response.json()) as { message?: string };
 				void messageApi.error(
@@ -1135,79 +1124,24 @@ export function CalendarSettingsPanel({
 				<Section
 					title={tr("Mail Service")}
 					description={tr(
-						"Configure SMTP for booking confirmation emails. Enable the mailer and fill in your SMTP credentials, then use the test button to verify the connection.",
+						"Booking confirmation emails are delivered via wp_mail(), using whatever SMTP plugin or mail configuration is active on your WordPress site.",
 					)}
 				>
 					<Flex vertical gap={16}>
 						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
 							<div style={{ maxWidth: 520 }}>
 								<Typography.Text strong style={{ display: "block" }}>
-									{tr("Enable SMTP Mailer")}
+									{tr("Enable Email Notifications")}
 								</Typography.Text>
 								<Typography.Text type="secondary">
 									{tr(
-										"Booking confirmation emails are sent via SMTP after each successful booking.",
+										"Send a booking confirmation email to the customer after each successful booking.",
 									)}
 								</Typography.Text>
 							</div>
 							<Switch
 								checked={settings.mailSettings.enabled}
 								onChange={(checked) => updateMailSettings({ enabled: checked })}
-							/>
-						</Flex>
-
-						<Flex gap={12} wrap="wrap">
-							<Input
-								placeholder={tr("SMTP host")}
-								value={settings.mailSettings.host}
-								style={{ minWidth: 220, flex: 1 }}
-								onChange={(event) =>
-									updateMailSettings({ host: event.target.value })
-								}
-							/>
-							<InputNumber
-								min={1}
-								max={65535}
-								value={settings.mailSettings.port}
-								addonBefore={tr("Port")}
-								style={{ minWidth: 150 }}
-								onChange={(value) =>
-									updateMailSettings({ port: Number(value ?? 587) })
-								}
-							/>
-							<Select
-								value={settings.mailSettings.encryption}
-								style={{ minWidth: 160 }}
-								options={[
-									{ label: tr("TLS"), value: "tls" },
-									{ label: tr("SSL"), value: "ssl" },
-									{ label: tr("None"), value: "none" },
-								]}
-								onChange={(value) =>
-									updateMailSettings({
-										encryption:
-											value as CalendarSettings["mailSettings"]["encryption"],
-									})
-								}
-							/>
-						</Flex>
-
-						<Flex gap={12} wrap="wrap">
-							<Input
-								placeholder={tr("SMTP username")}
-								value={settings.mailSettings.username}
-								style={{ minWidth: 220, flex: 1 }}
-								onChange={(event) =>
-									updateMailSettings({ username: event.target.value })
-								}
-							/>
-							<Input.Password
-								placeholder={tr("SMTP password")}
-								value={settings.mailSettings.password}
-								style={{ minWidth: 220, flex: 1 }}
-								onChange={(event) =>
-									updateMailSettings({ password: event.target.value })
-								}
 							/>
 						</Flex>
 
@@ -1249,7 +1183,6 @@ export function CalendarSettingsPanel({
 							<Button
 								onClick={() => void handleSendTestMail()}
 								loading={testMailLoading}
-								disabled={!settings.mailSettings.enabled}
 							>
 								{tr("Send Test Email")}
 							</Button>

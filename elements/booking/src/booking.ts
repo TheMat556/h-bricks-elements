@@ -158,6 +158,7 @@ type BookingState = {
 	visibleDate: Date | null;
 	selectedDate: Date | null;
 	selectedSlot: BookingSlot | null;
+	renderedSlots: BookingSlot[];
 	selectedServiceIds: Set<string>;
 	bookingForm: BookingFormState;
 	bookingNotice: BookingNotice | null;
@@ -215,8 +216,8 @@ function bootBookingElements() {
 		});
 }
 
-async function initBookingElement(root: HTMLElement) {
-	const state: BookingState = {
+function createInitialBookingState(root: HTMLElement): BookingState {
+	return {
 		root,
 		firstColumnEl: root.querySelector<HTMLElement>(
 			".hbe-booking__column--first",
@@ -258,6 +259,7 @@ async function initBookingElement(root: HTMLElement) {
 		visibleDate: null,
 		selectedDate: null,
 		selectedSlot: null,
+		renderedSlots: [],
 		selectedServiceIds: new Set<string>(),
 		bookingForm: {
 			name: "",
@@ -277,6 +279,10 @@ async function initBookingElement(root: HTMLElement) {
 		timeFormat: "12h",
 		calendarInstance: null,
 	};
+}
+
+async function initBookingElement(root: HTMLElement) {
+	const state = createInitialBookingState(root);
 
 	if (!state.calendarMountEl || !state.statusEl) {
 		return;
@@ -289,6 +295,7 @@ async function initBookingElement(root: HTMLElement) {
 	ensureStepperProgressElement(state);
 	setBookingStep(state, "availability", false);
 	syncBookingLayoutState(state);
+	bindRootInteractions(state);
 
 	if (!state.calendarId || !state.restBase) {
 		renderMissingCalendar(state);
@@ -561,8 +568,6 @@ function syncStepperUI(state: BookingState) {
 				.join("")}
 		</div>
 	`;
-
-	attachStepperInteractions(state);
 }
 
 function goToStepperPanel(state: BookingState, panel: StepperPanel) {
@@ -633,58 +638,296 @@ function setStepperDirection(state: BookingState, panel: StepperPanel) {
 		nextIndex < currentIndex ? "back" : "forward";
 }
 
-function attachStepperInteractions(state: BookingState) {
-	if (!isStepperMode(state)) {
+function bindRootInteractions(state: BookingState) {
+	state.root.addEventListener("click", (event) => {
+		handleDelegatedClick(state, event);
+	});
+	state.root.addEventListener("input", (event) => {
+		handleDelegatedInput(state, event);
+	});
+	state.root.addEventListener("submit", (event) => {
+		handleDelegatedSubmit(state, event);
+	});
+}
+
+function handleDelegatedClick(state: BookingState, event: MouseEvent) {
+	if (!(event.target instanceof Element)) {
 		return;
 	}
 
-	state.root
-		.querySelectorAll<HTMLButtonElement>("[data-stepper-target]")
-		.forEach((button) => {
-			if (button.dataset.stepperBound === "true") {
-				return;
-			}
+	const actionEl = findDelegatedActionElement(state, event.target);
 
-			button.dataset.stepperBound = "true";
-			button.addEventListener("click", () => {
-				const target = button.dataset.stepperTarget;
-
-				if (
-					target !== "first" &&
-					target !== "calendar" &&
-					target !== "slots" &&
-					target !== "details" &&
-					target !== "success"
-				) {
-					return;
-				}
-
-				goToStepperPanel(state, target);
-			});
-		});
-}
-
-function renderFirstColumnStepperActions(state: BookingState): string {
-	if (!isStepperMode(state)) {
-		return "";
+	if (!actionEl) {
+		return;
 	}
 
-	const selectedServices = getActiveServices(state);
-	const nextDisabled =
-		state.firstColumnMode === "service" && selectedServices.length === 0;
+	if (handleStepperTargetAction(state, actionEl)) {
+		return;
+	}
 
-	return `
-		<div class="hbe-booking__stepper-actions">
-			<button
-				type="button"
-				class="hbe-booking__details-button"
-				data-stepper-target="calendar"
-				${nextDisabled ? "disabled" : ""}
-			>
-				Continue to Date
-			</button>
-		</div>
-	`;
+	if (handleServiceSelectionAction(state, actionEl)) {
+		return;
+	}
+
+	if (handleCalendarDateAction(state, actionEl)) {
+		return;
+	}
+
+	if (handleCalendarNavigationAction(state, actionEl)) {
+		return;
+	}
+
+	if (handleTimeFormatAction(state, actionEl)) {
+		return;
+	}
+
+	if (handleSlotAction(state, actionEl)) {
+		return;
+	}
+
+	if (handleBookingStepAction(state, actionEl)) {
+		return;
+	}
+
+	if (actionEl.dataset.bookingReset === "true") {
+		transitionFromSuccessToAvailability(state);
+	}
+}
+
+function findDelegatedActionElement(
+	state: BookingState,
+	target: Element,
+): HTMLElement | null {
+	const actionEl = target.closest<HTMLElement>(
+		[
+			"[data-stepper-target]",
+			"[data-service-id]",
+			"[data-calendar-date]",
+			"[data-calendar-nav]",
+			"[data-time-format]",
+			"[data-slot-start][data-slot-end]",
+			"[data-booking-step]",
+			"[data-booking-reset]",
+		].join(", "),
+	);
+
+	return actionEl && state.root.contains(actionEl) ? actionEl : null;
+}
+
+function handleStepperTargetAction(
+	state: BookingState,
+	actionEl: HTMLElement,
+): boolean {
+	const stepperTarget = actionEl.dataset.stepperTarget;
+	if (
+		stepperTarget === "first" ||
+		stepperTarget === "calendar" ||
+		stepperTarget === "slots" ||
+		stepperTarget === "details" ||
+		stepperTarget === "success"
+	) {
+		goToStepperPanel(state, stepperTarget);
+		return true;
+	}
+
+	return false;
+}
+
+function handleServiceSelectionAction(
+	state: BookingState,
+	actionEl: HTMLElement,
+): boolean {
+	const serviceId = actionEl.dataset.serviceId;
+	if (serviceId) {
+		void toggleServiceSelection(state, serviceId);
+		return true;
+	}
+
+	return false;
+}
+
+function handleCalendarDateAction(
+	state: BookingState,
+	actionEl: HTMLElement,
+): boolean {
+	const calendarDate = actionEl.dataset.calendarDate;
+	if (calendarDate) {
+		handleCalendarDateSelection(state, calendarDate);
+		return true;
+	}
+
+	return false;
+}
+
+function handleCalendarNavigationAction(
+	state: BookingState,
+	actionEl: HTMLElement,
+): boolean {
+	const calendarNav = actionEl.dataset.calendarNav;
+	if (calendarNav === "prev" || calendarNav === "next") {
+		void navigateCalendarMonth(state, calendarNav === "prev" ? -1 : 1);
+		return true;
+	}
+
+	return false;
+}
+
+function handleTimeFormatAction(
+	state: BookingState,
+	actionEl: HTMLElement,
+): boolean {
+	const timeFormat = actionEl.dataset.timeFormat;
+	if (timeFormat === "12h" || timeFormat === "24h") {
+		state.timeFormat = timeFormat;
+		renderSlots(state);
+		return true;
+	}
+
+	return false;
+}
+
+function handleSlotAction(state: BookingState, actionEl: HTMLElement): boolean {
+	const slotStart = actionEl.dataset.slotStart;
+	const slotEnd = actionEl.dataset.slotEnd;
+	if (slotStart && slotEnd) {
+		handleSlotSelection(state, slotStart, slotEnd);
+		return true;
+	}
+
+	return false;
+}
+
+function handleBookingStepAction(
+	state: BookingState,
+	actionEl: HTMLElement,
+): boolean {
+	const bookingStep = actionEl.dataset.bookingStep;
+	if (bookingStep === "details") {
+		if (!state.selectedSlot) {
+			return true;
+		}
+
+		transitionInlineBookingStep(state, "details");
+		return true;
+	}
+
+	if (bookingStep === "availability") {
+		transitionInlineBookingStep(state, "availability");
+		return true;
+	}
+
+	return false;
+}
+
+function handleDelegatedInput(state: BookingState, event: Event) {
+	const target = event.target;
+
+	if (
+		!(
+			target instanceof HTMLInputElement ||
+			target instanceof HTMLTextAreaElement
+		)
+	) {
+		return;
+	}
+
+	const key = target.dataset.bookingField;
+
+	if (key !== "name" && key !== "email" && key !== "phone" && key !== "notes") {
+		return;
+	}
+
+	state.bookingForm = {
+		...state.bookingForm,
+		[key]: target.value,
+	};
+}
+
+function handleDelegatedSubmit(state: BookingState, event: Event) {
+	const target = event.target;
+
+	if (
+		!(target instanceof HTMLFormElement) ||
+		target.dataset.bookingForm !== "true"
+	) {
+		return;
+	}
+
+	event.preventDefault();
+	void submitPublicBooking(state);
+}
+
+function handleCalendarDateSelection(state: BookingState, dateKey: string) {
+	const clickedDate = parseDateKey(dateKey);
+
+	if (!clickedDate || !isDateAvailable(state, clickedDate)) {
+		return;
+	}
+
+	state.selectedDate = clickedDate;
+	state.selectedSlot = null;
+	setBookingNotice(state, null);
+	resetCompletedBooking(state);
+	setBookingStep(state, "availability");
+
+	if (shouldAutoAdvanceStepper(state) && state.showSlots) {
+		setStepperDirection(state, "slots");
+		state.stepperPanel = "slots";
+	}
+
+	renderCalendarMeta(state);
+	renderSlots(state);
+	state.calendarInstance?.redraw();
+}
+
+function handleSlotSelection(
+	state: BookingState,
+	slotStart: string,
+	slotEnd: string,
+) {
+	const slot = state.renderedSlots.find(
+		(candidate) => candidate.start === slotStart && candidate.end === slotEnd,
+	);
+
+	if (!slot) {
+		return;
+	}
+
+	state.selectedSlot = slot;
+	setBookingNotice(state, null);
+	resetCompletedBooking(state);
+
+	if (shouldAutoAdvanceStepper(state)) {
+		setStepperDirection(state, "details");
+		state.stepperPanel = "details";
+		setBookingStep(state, "details");
+		renderCalendarMeta(state);
+		renderSlots(state);
+		return;
+	}
+
+	setBookingStep(state, "availability");
+	renderCalendarMeta(state);
+	syncRenderedSlotSelection(state, slot);
+}
+
+function syncRenderedSlotSelection(
+	state: BookingState,
+	selectedSlot: BookingSlot,
+) {
+	state.slotsBodyEl
+		?.querySelectorAll<HTMLButtonElement>("[data-slot-start][data-slot-end]")
+		.forEach((button) => {
+			button.classList.toggle(
+				"is-selected",
+				button.dataset.slotStart === selectedSlot.start &&
+					button.dataset.slotEnd === selectedSlot.end,
+			);
+		});
+
+	state.slotsBodyEl
+		?.querySelector<HTMLButtonElement>('[data-booking-step="details"]')
+		?.removeAttribute("disabled");
 }
 
 function renderCalendarStepperActions(state: BookingState): string {
@@ -879,15 +1122,207 @@ async function createPublicBookingRequest(
 	return data.item;
 }
 
+function createContentElement<K extends keyof HTMLElementTagNameMap>(
+	tagName: K,
+	className: string,
+	text?: string,
+): HTMLElementTagNameMap[K] {
+	const element = document.createElement(tagName);
+	element.className = className;
+
+	if (typeof text === "string") {
+		element.textContent = text;
+	}
+
+	return element;
+}
+
+function renderStatusMessage(
+	target: HTMLElement,
+	{
+		label,
+		title,
+		copy,
+	}: {
+		label: string;
+		title: string;
+		copy: string;
+	},
+) {
+	target.replaceChildren(
+		createContentElement("span", "hbe-booking__status-label", label),
+		createContentElement("strong", "hbe-booking__status-title", title),
+		createContentElement("span", "hbe-booking__status-copy", copy),
+	);
+}
+
+function createInfoStack({
+	title,
+	copy,
+	icon,
+}: {
+	title: string;
+	copy: string;
+	icon?: string;
+}): HTMLDivElement {
+	const stack = createContentElement("div", "hbe-booking__info-stack");
+
+	if (icon) {
+		stack.append(createContentElement("span", "hbe-booking__info-icon", icon));
+	}
+
+	stack.append(
+		createContentElement("h3", "hbe-booking__title", title),
+		createContentElement("p", "hbe-booking__copy", copy),
+	);
+
+	return stack;
+}
+
+function createFirstColumnSelectionElement(
+	state: BookingState,
+): HTMLDivElement | null {
+	if (!state.selectedDate || !state.selectedSlot) {
+		return null;
+	}
+
+	const selection = createContentElement("div", "hbe-booking__first-selection");
+	const label = createContentElement(
+		"div",
+		"hbe-booking__first-selection-label",
+		"Selected Time",
+	);
+	const value = createContentElement(
+		"div",
+		"hbe-booking__first-selection-value",
+	);
+
+	value.append(
+		document.createTextNode(longDateFormatter.format(state.selectedDate)),
+		document.createTextNode(" •"),
+		document.createElement("br"),
+		document.createTextNode(
+			formatSlotRange(state.selectedSlot, state.timeFormat),
+		),
+	);
+	selection.append(label, value);
+
+	return selection;
+}
+
+function createFirstColumnStepperActions(
+	state: BookingState,
+): HTMLDivElement | null {
+	if (!isStepperMode(state)) {
+		return null;
+	}
+
+	const selectedServices = getActiveServices(state);
+	const nextDisabled =
+		state.firstColumnMode === "service" && selectedServices.length === 0;
+	const actions = createContentElement("div", "hbe-booking__stepper-actions");
+	const button = createContentElement(
+		"button",
+		"hbe-booking__details-button",
+		"Continue to Date",
+	);
+
+	button.type = "button";
+	button.dataset.stepperTarget = "calendar";
+	button.disabled = nextDisabled;
+	actions.append(button);
+
+	return actions;
+}
+
+function createServiceButton(
+	state: BookingState,
+	service: Service,
+): HTMLButtonElement {
+	const isActive = state.selectedServiceIds.has(service.id);
+	const serviceMinutes = getServiceMinutes(service);
+	const servicePrice = service.price?.trim() ?? "";
+	const button = createContentElement(
+		"button",
+		`hbe-booking__service-button${isActive ? " is-active" : ""}`,
+	);
+
+	button.type = "button";
+	button.dataset.serviceId = service.id;
+	button.setAttribute("aria-pressed", isActive ? "true" : "false");
+	button.append(
+		createContentElement(
+			"span",
+			"hbe-booking__service-name",
+			getServiceDisplayLabel(service),
+		),
+	);
+
+	if (serviceMinutes > 0) {
+		button.append(
+			createContentElement(
+				"span",
+				"hbe-booking__service-meta",
+				`${serviceMinutes} min`,
+			),
+		);
+	}
+
+	if (service.description) {
+		button.append(
+			createContentElement(
+				"span",
+				"hbe-booking__service-copy",
+				service.description,
+			),
+		);
+	}
+
+	if (servicePrice) {
+		button.append(
+			createContentElement("span", "hbe-booking__service-price", servicePrice),
+		);
+	}
+
+	return button;
+}
+
+function renderTitleCopyBlock(
+	target: HTMLElement,
+	title: string,
+	copy: string,
+) {
+	target.replaceChildren(
+		createContentElement("h3", "hbe-booking__title", title),
+		createContentElement("p", "hbe-booking__copy", copy),
+	);
+}
+
+function renderCalendarMetaBlock(
+	target: HTMLElement,
+	title: string,
+	copy: string,
+) {
+	const topline = createContentElement("div", "hbe-booking__calendar-topline");
+	const headingWrap = document.createElement("div");
+	headingWrap.append(createContentElement("h3", "hbe-booking__title", title));
+	topline.append(headingWrap);
+	target.replaceChildren(
+		topline,
+		createContentElement("p", "hbe-booking__copy", copy),
+	);
+}
+
 function renderLoadingState(state: BookingState) {
 	state.root.setAttribute("data-loading", "");
+	state.renderedSlots = [];
 
 	if (state.slotsBodyEl) {
-		state.slotsBodyEl.innerHTML = "";
+		state.slotsBodyEl.replaceChildren();
 	}
 
 	if (state.firstColumnMode === "service" && state.firstBodyEl) {
-		state.firstBodyEl.innerHTML = "";
+		state.firstBodyEl.replaceChildren();
 	}
 
 	syncStepperUI(state);
@@ -895,25 +1330,27 @@ function renderLoadingState(state: BookingState) {
 
 function renderMissingCalendar(state: BookingState) {
 	if (state.statusEl) {
-		state.statusEl.innerHTML = `
-			<span class="hbe-booking__status-label">Booking unavailable</span>
-			<strong class="hbe-booking__status-title">This booking page is not ready yet</strong>
-			<span class="hbe-booking__status-copy">Please check back later.</span>
-		`;
+		renderStatusMessage(state.statusEl, {
+			label: "Booking unavailable",
+			title: "This booking page is not ready yet",
+			copy: "Please check back later.",
+		});
 	}
 
 	if (state.firstBodyEl && !state.isBuilderPreview) {
-		state.firstBodyEl.innerHTML = `
-			<h3 class="hbe-booking__title">Booking unavailable</h3>
-			<p class="hbe-booking__copy">This booking page is not ready yet.</p>
-		`;
+		renderTitleCopyBlock(
+			state.firstBodyEl,
+			"Booking unavailable",
+			"This booking page is not ready yet.",
+		);
 	}
 
 	if (state.slotsBodyEl && !state.isBuilderPreview) {
-		state.slotsBodyEl.innerHTML = `
-			<h3 class="hbe-booking__title">No availability yet</h3>
-			<p class="hbe-booking__copy">Please try again later.</p>
-		`;
+		renderTitleCopyBlock(
+			state.slotsBodyEl,
+			"No availability yet",
+			"Please try again later.",
+		);
 	}
 
 	syncStepperUI(state);
@@ -921,32 +1358,31 @@ function renderMissingCalendar(state: BookingState) {
 
 function renderErrorState(state: BookingState, message: string) {
 	if (state.statusEl) {
-		state.statusEl.innerHTML = `
-			<span class="hbe-booking__status-label">Calendar unavailable</span>
-			<strong class="hbe-booking__status-title">Availability could not be loaded</strong>
-			<span class="hbe-booking__status-copy">${escapeHtml(message)}</span>
-		`;
+		renderStatusMessage(state.statusEl, {
+			label: "Calendar unavailable",
+			title: "Availability could not be loaded",
+			copy: message,
+		});
 	}
 
 	if (state.calendarMetaEl) {
-		state.calendarMetaEl.innerHTML = `
-			<h3 class="hbe-booking__title">Calendar unavailable</h3>
-			<p class="hbe-booking__copy">${escapeHtml(message)}</p>
-		`;
+		renderTitleCopyBlock(state.calendarMetaEl, "Calendar unavailable", message);
 	}
 
 	if (state.firstBodyEl && state.firstColumnMode === "service") {
-		state.firstBodyEl.innerHTML = `
-			<h3 class="hbe-booking__title">Booking options unavailable</h3>
-			<p class="hbe-booking__copy">We couldn&apos;t load the available booking options.</p>
-		`;
+		renderTitleCopyBlock(
+			state.firstBodyEl,
+			"Booking options unavailable",
+			"We couldn't load the available booking options.",
+		);
 	}
 
 	if (state.slotsBodyEl) {
-		state.slotsBodyEl.innerHTML = `
-			<h3 class="hbe-booking__title">Availability unavailable</h3>
-			<p class="hbe-booking__copy">The calendar data could not be loaded.</p>
-		`;
+		renderTitleCopyBlock(
+			state.slotsBodyEl,
+			"Availability unavailable",
+			"The calendar data could not be loaded.",
+		);
 	}
 
 	syncStepperUI(state);
@@ -1122,53 +1558,45 @@ function attachNoticeAnimationCleanup(state: BookingState) {
 		return;
 	}
 
-	// Measure the real content height before hiding so the animation
-	// ends exactly when the form reaches its final position — no overshoot.
+	// Measure content height at natural size before collapsing.
 	const targetH = noticeWrap.scrollHeight;
-	const targetMarginBottom = parseFloat(
-		getComputedStyle(noticeWrap).marginBottom,
-	);
 
-	// Hide synchronously (before first paint) so the WAAPI start frame
-	// matches what the user never sees.
-	noticeWrap.style.maxHeight = "0px";
-	noticeWrap.style.marginBottom = "0px";
+	// Collapse synchronously — void offsetHeight forces the browser to commit
+	// the start state so the CSS transition sees a real before → after change.
+	noticeWrap.style.height = "0px";
+	noticeWrap.style.overflow = "hidden";
 	noticeWrap.style.opacity = "0";
-	noticeWrap.style.transform = "translateY(-0.6rem)";
+	noticeWrap.style.transform = "translateY(-0.5rem)";
+	void noticeWrap.offsetHeight; // force reflow
 
-	const expand = noticeWrap.animate(
-		[
-			{
-				maxHeight: "0px",
-				marginBottom: "0px",
-				opacity: "0",
-				transform: "translateY(-0.6rem)",
-			},
-			{
-				maxHeight: `${targetH}px`,
-				marginBottom: `${targetMarginBottom}px`,
-				opacity: "1",
-				transform: "translateY(0)",
-			},
-		],
-		{
-			duration: 300,
-			easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-			fill: "forwards",
-		},
-	);
+	// CSS transitions are better optimised for layout properties than WAAPI.
+	noticeWrap.style.transition = [
+		"height 240ms cubic-bezier(0.4, 0, 0.2, 1)",
+		"opacity 180ms ease",
+		"transform 200ms ease-out",
+	].join(", ");
 
-	expand.addEventListener("finish", () => {
-		// Cancel fill so CSS takes back control of all properties.
-		expand.cancel();
-		noticeWrap.style.maxHeight = "";
-		noticeWrap.style.marginBottom = "";
+	noticeWrap.style.height = `${targetH}px`;
+	noticeWrap.style.opacity = "1";
+	noticeWrap.style.transform = "translateY(0)";
+
+	// Do NOT use { once: true } — transitionend fires once per property
+	// (height, opacity, transform). { once: true } removes the listener after
+	// the first event (e.g. opacity), so the height event is never caught.
+	const onTransitionEnd = (e: TransitionEvent) => {
+		if (e.target !== noticeWrap || e.propertyName !== "height") {
+			return;
+		}
+		noticeWrap.removeEventListener("transitionend", onTransitionEnd);
+		noticeWrap.style.height = "";
+		noticeWrap.style.overflow = "";
 		noticeWrap.style.opacity = "";
 		noticeWrap.style.transform = "";
+		noticeWrap.style.transition = "";
 		cleanup(true);
-	});
+	};
+	noticeWrap.addEventListener("transitionend", onTransitionEnd);
 }
-
 
 function renderCalendarMeta(state: BookingState) {
 	const calendar = state.calendar;
@@ -1187,25 +1615,18 @@ function renderCalendarMeta(state: BookingState) {
 				? "Select a service to narrow availability."
 				: "Choose a day to inspect the currently available booking slots.";
 
-	state.calendarMetaEl.innerHTML = `
-		<div class="hbe-booking__calendar-topline">
-			<div>
-				<h3 class="hbe-booking__title">Select Date</h3>
-			</div>
-		</div>
-		<p class="hbe-booking__copy">${escapeHtml(serviceSummary)}</p>
-	`;
+	renderCalendarMetaBlock(state.calendarMetaEl, "Select Date", serviceSummary);
 
 	if (calendar.settings.adminOnly) {
-		state.statusEl.innerHTML = `
-			<span class="hbe-booking__status-label">Booking unavailable</span>
-			<strong class="hbe-booking__status-title">Online booking is disabled</strong>
-			<span class="hbe-booking__status-copy">Please contact us directly if you would like to schedule this meeting.</span>
-		`;
+		renderStatusMessage(state.statusEl, {
+			label: "Booking unavailable",
+			title: "Online booking is disabled",
+			copy: "Please contact us directly if you would like to schedule this meeting.",
+		});
 		return;
 	}
 
-	state.statusEl.innerHTML = "";
+	state.statusEl.replaceChildren();
 }
 
 function renderFirstColumn(state: BookingState) {
@@ -1235,24 +1656,21 @@ function renderInfoColumn(state: BookingState) {
 	const text =
 		state.infoText.trim() || "Choose a date and time that works best for you.";
 	const icon = state.calendar.settings.icon?.trim() ?? "";
+	const layout = createContentElement("div", "hbe-booking__first-layout");
+	const selection = createFirstColumnSelectionElement(state);
+	const stepperActions = createFirstColumnStepperActions(state);
 
-	state.firstBodyEl.innerHTML = `
-		<div class="hbe-booking__first-layout">
-			<div class="hbe-booking__info-stack">
-				${
-					icon
-						? `<span class="hbe-booking__info-icon">${escapeHtml(icon)}</span>`
-						: ""
-				}
-				<h3 class="hbe-booking__title">${escapeHtml(title)}</h3>
-				<p class="hbe-booking__copy">${escapeHtml(text)}</p>
-			</div>
-			${renderFirstColumnSelection(state)}
-			${renderFirstColumnStepperActions(state)}
-		</div>
-	`;
+	layout.append(createInfoStack({ title, copy: text, icon }));
 
-	attachStepperInteractions(state);
+	if (selection) {
+		layout.append(selection);
+	}
+
+	if (stepperActions) {
+		layout.append(stepperActions);
+	}
+
+	state.firstBodyEl.replaceChildren(layout);
 	syncStepperUI(state);
 }
 
@@ -1267,17 +1685,26 @@ function renderServicesColumn(state: BookingState) {
 	const heading = state.firstColumnLabel.trim() || "Services";
 
 	if (services.length === 0) {
-		state.firstBodyEl.innerHTML = `
-			<div class="hbe-booking__first-layout">
-				<div class="hbe-booking__info-stack">
-					<h3 class="hbe-booking__title">${escapeHtml(heading)}</h3>
-					<p class="hbe-booking__copy">No services are available for booking right now.</p>
-				</div>
-				${renderFirstColumnSelection(state)}
-				${renderFirstColumnStepperActions(state)}
-			</div>
-		`;
-		attachStepperInteractions(state);
+		const layout = createContentElement("div", "hbe-booking__first-layout");
+		const selection = createFirstColumnSelectionElement(state);
+		const stepperActions = createFirstColumnStepperActions(state);
+
+		layout.append(
+			createInfoStack({
+				title: heading,
+				copy: "No services are available for booking right now.",
+			}),
+		);
+
+		if (selection) {
+			layout.append(selection);
+		}
+
+		if (stepperActions) {
+			layout.append(stepperActions);
+		}
+
+		state.firstBodyEl.replaceChildren(layout);
 		syncStepperUI(state);
 		return;
 	}
@@ -1286,79 +1713,28 @@ function renderServicesColumn(state: BookingState) {
 	const description = isMulti
 		? "Select one or more services."
 		: "Select a service.";
+	const layout = createContentElement("div", "hbe-booking__first-layout");
+	const buttons = createContentElement("div", "hbe-booking__service-buttons");
+	const selection = createFirstColumnSelectionElement(state);
+	const stepperActions = createFirstColumnStepperActions(state);
 
-	const buttonsMarkup = services
-		.map((service) => {
-			const isActive = state.selectedServiceIds.has(service.id);
-			const serviceMinutes = getServiceMinutes(service);
-			const servicePrice = service.price?.trim() ?? "";
+	layout.append(createInfoStack({ title: heading, copy: description }));
+	services.forEach((service) => {
+		buttons.append(createServiceButton(state, service));
+	});
+	layout.append(buttons);
 
-			return `
-				<button
-					type="button"
-					class="hbe-booking__service-button${isActive ? " is-active" : ""}"
-					data-service-id="${escapeAttribute(service.id)}"
-					aria-pressed="${isActive ? "true" : "false"}"
-				>
-					<span class="hbe-booking__service-name">${escapeHtml(getServiceDisplayLabel(service))}</span>
-					${
-						serviceMinutes > 0
-							? `<span class="hbe-booking__service-meta">${serviceMinutes} min</span>`
-							: ""
-					}
-					${
-						service.description
-							? `<span class="hbe-booking__service-copy">${escapeHtml(service.description)}</span>`
-							: ""
-					}
-					${
-						servicePrice
-							? `<span class="hbe-booking__service-price">${escapeHtml(servicePrice)}</span>`
-							: ""
-					}
-				</button>
-			`;
-		})
-		.join("");
-
-	state.firstBodyEl.innerHTML = `
-		<div class="hbe-booking__first-layout">
-			<div class="hbe-booking__panel-intro">
-				<h3 class="hbe-booking__title">${escapeHtml(heading)}</h3>
-				<p class="hbe-booking__copy">${escapeHtml(description)}</p>
-			</div>
-			<div class="hbe-booking__service-buttons">${buttonsMarkup}</div>
-			${renderFirstColumnSelection(state)}
-			${renderFirstColumnStepperActions(state)}
-		</div>
-	`;
-
-	state.firstBodyEl
-		.querySelectorAll<HTMLButtonElement>("[data-service-id]")
-		.forEach((button) => {
-			button.addEventListener("click", () => {
-				void toggleServiceSelection(state, button.dataset.serviceId ?? "");
-			});
-		});
-
-	attachStepperInteractions(state);
-	syncStepperUI(state);
-}
-
-function renderFirstColumnSelection(state: BookingState): string {
-	if (!state.selectedDate || !state.selectedSlot) {
-		return "";
+	if (selection) {
+		layout.append(selection);
 	}
 
-	return `
-		<div class="hbe-booking__first-selection">
-			<div class="hbe-booking__first-selection-label">Selected Time</div>
-			<div class="hbe-booking__first-selection-value">
-				${escapeHtml(longDateFormatter.format(state.selectedDate))} •<br />
-				${escapeHtml(formatSlotRange(state.selectedSlot, state.timeFormat))}
-			</div>
-		</div>
-	`;
+	if (stepperActions) {
+		layout.append(stepperActions);
+	}
+
+	state.firstBodyEl.replaceChildren(layout);
+
+	syncStepperUI(state);
 }
 
 async function toggleServiceSelection(state: BookingState, serviceId: string) {
@@ -1366,15 +1742,19 @@ async function toggleServiceSelection(state: BookingState, serviceId: string) {
 		return;
 	}
 
+	const nextSelectedServiceIds = new Set(state.selectedServiceIds);
+
 	if (state.calendar.settings.selectionMode === "multi") {
-		if (state.selectedServiceIds.has(serviceId)) {
-			state.selectedServiceIds.delete(serviceId);
+		if (nextSelectedServiceIds.has(serviceId)) {
+			nextSelectedServiceIds.delete(serviceId);
 		} else {
-			state.selectedServiceIds.add(serviceId);
+			nextSelectedServiceIds.add(serviceId);
 		}
 	} else {
-	state.selectedServiceIds = new Set([serviceId]);
+		nextSelectedServiceIds.clear();
+		nextSelectedServiceIds.add(serviceId);
 	}
+	state.selectedServiceIds = nextSelectedServiceIds;
 
 	setBookingNotice(state, null);
 	resetCompletedBooking(state);
@@ -1398,7 +1778,7 @@ function mountCalendar(state: BookingState) {
 	}
 
 	state.calendarInstance?.destroy();
-	state.calendarMountEl.innerHTML = "";
+	state.calendarMountEl.replaceChildren();
 
 	const today = startOfDay(new Date());
 	const initialDate = state.visibleDate ?? state.selectedDate ?? today;
@@ -1492,49 +1872,6 @@ function mountCalendar(state: BookingState) {
 		${renderCalendarStepperActions(state)}
 	`;
 
-	state.calendarMountEl
-		.querySelectorAll<HTMLButtonElement>("[data-calendar-date]")
-		.forEach((button) => {
-			button.addEventListener("click", () => {
-				const dateKey = button.dataset.calendarDate;
-
-				if (!dateKey) {
-					return;
-				}
-
-				const clickedDate = parseDateKey(dateKey);
-
-				if (!clickedDate || !isDateAvailable(state, clickedDate)) {
-					return;
-				}
-
-				state.selectedDate = clickedDate;
-				state.selectedSlot = null;
-				setBookingNotice(state, null);
-				resetCompletedBooking(state);
-				setBookingStep(state, "availability");
-				if (shouldAutoAdvanceStepper(state) && state.showSlots) {
-					setStepperDirection(state, "slots");
-					state.stepperPanel = "slots";
-				}
-				renderCalendarMeta(state);
-				renderSlots(state);
-				state.calendarInstance?.redraw();
-			});
-		});
-
-	state.calendarMountEl
-		.querySelector<HTMLButtonElement>('[data-calendar-nav="prev"]')
-		?.addEventListener("click", () => {
-			void navigateCalendarMonth(state, -1);
-		});
-
-	state.calendarMountEl
-		.querySelector<HTMLButtonElement>('[data-calendar-nav="next"]')
-		?.addEventListener("click", () => {
-			void navigateCalendarMonth(state, 1);
-		});
-
 	state.calendarInstance = {
 		clear: () => {
 			mountCalendar(state);
@@ -1547,7 +1884,6 @@ function mountCalendar(state: BookingState) {
 		},
 	};
 
-	attachStepperInteractions(state);
 	syncStepperUI(state);
 }
 
@@ -1590,165 +1926,220 @@ async function navigateCalendarMonth(state: BookingState, delta: number) {
 	}
 }
 
-function renderSlots(state: BookingState) {
-	renderFirstColumn(state);
-
-	if (!state.slotsBodyEl || !state.calendar) {
-		return;
+function renderAdminOnlySlotsState(state: BookingState): boolean {
+	if (!state.slotsBodyEl || !state.calendar?.settings.adminOnly) {
+		return false;
 	}
 
-	if (state.calendar.settings.adminOnly) {
-		setBookingStep(state, "availability");
-		state.slotsBodyEl.innerHTML = renderSlotsPanel(
-			`
-				<h3 class="hbe-booking__title">Booking unavailable</h3>
-				<p class="hbe-booking__copy">Online booking is not available for this calendar right now.</p>
-			`,
-			"blocked",
-		);
-		syncStepperUI(state);
-		return;
-	}
-
-	if (!state.selectedDate) {
-		setBookingStep(state, "availability");
-		state.slotsBodyEl.innerHTML = renderSlotsPanel(
-			`
-				<div class="hbe-booking__slots-header">
-					<p class="hbe-booking__copy">Choose a date to see available times.</p>
-					${renderTimeFormatToggle(state)}
-				</div>
-			`,
-			"empty",
-		);
-		attachTimeFormatToggle(state);
-		syncStepperUI(state);
-		return;
-	}
-
-	const dateKey = toDateKey(state.selectedDate);
-	const matchingException = getExceptionForDate(
-		state.calendar.settings,
-		dateKey,
+	state.renderedSlots = [];
+	setBookingStep(state, "availability");
+	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+		`
+			<h3 class="hbe-booking__title">Booking unavailable</h3>
+			<p class="hbe-booking__copy">Online booking is not available for this calendar right now.</p>
+		`,
+		"blocked",
 	);
+	syncStepperUI(state);
 
-	if (matchingException) {
-		state.slotsBodyEl.innerHTML = renderSlotsPanel(
-			`
-				<h3 class="hbe-booking__title">${escapeHtml(longDateFormatter.format(state.selectedDate))}</h3>
-				<p class="hbe-booking__copy">This date is not available${matchingException.reason ? `: ${escapeHtml(matchingException.reason)}` : "."}</p>
-			`,
-			"blocked",
-		);
-		syncStepperUI(state);
-		return;
+	return true;
+}
+
+function renderUnselectedDateSlotsState(state: BookingState): boolean {
+	if (!state.slotsBodyEl || state.selectedDate) {
+		return false;
 	}
 
-	const requiredMinutes = getRequiredMinutes(state);
-	const availableSlots = getBookableSlotsForDate(
-		state.calendar.settings,
-		state.selectedDate,
-		requiredMinutes,
-		state.bookings,
-	);
-
-	const slotSelectionWasCleared =
-		state.selectedSlot !== null &&
-		!availableSlots.some((slot) =>
-			isSameSlot(slot, state.selectedSlot as BookingSlot),
-		);
-
-	if (slotSelectionWasCleared) {
-		state.selectedSlot = null;
-		setBookingStep(state, "availability");
-	}
-
-	if (slotSelectionWasCleared) {
-		renderCalendarMeta(state);
-	}
-
-	const dateHeading = longDateFormatter.format(state.selectedDate);
-	const priceLabel = getSelectedPriceLabel(state);
-	const serviceLabel = getSelectedServiceLabel(state);
-	const noticeMarkup = state.bookingNotice
-		? `<div class="hbe-booking__booking-notice-wrap${state.bookingNoticeShouldAnimate ? " is-entering" : ""}">
-			<div class="hbe-booking__booking-notice is-${escapeAttribute(state.bookingNotice.type)}${state.bookingNoticeShouldAnimate ? " is-entering" : ""}${state.bookingNoticeShouldWiggle ? " is-wiggling" : ""}">
-				${escapeHtml(state.bookingNotice.message)}
+	state.renderedSlots = [];
+	setBookingStep(state, "availability");
+	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+		`
+			<div class="hbe-booking__slots-header">
+				<p class="hbe-booking__copy">Choose a date to see available times.</p>
+				${renderTimeFormatToggle(state)}
 			</div>
-		</div>`
-		: "";
+		`,
+		"empty",
+	);
+	syncStepperUI(state);
 
-	if (state.bookingCompleted && state.completedBooking) {
-		// Reuse same transition pattern as availability↔details
-		state.root.classList.remove(
-			"is-inline-transitioning-out",
-			"is-inline-transitioning-in",
+	return true;
+}
+
+function renderExceptionSlotsState(
+	state: BookingState,
+	matchingException: DateException | undefined,
+): boolean {
+	if (!state.slotsBodyEl || !state.selectedDate || !matchingException) {
+		return false;
+	}
+
+	state.renderedSlots = [];
+	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+		`
+			<h3 class="hbe-booking__title">${escapeHtml(longDateFormatter.format(state.selectedDate))}</h3>
+			<p class="hbe-booking__copy">This date is not available${matchingException.reason ? `: ${escapeHtml(matchingException.reason)}` : "."}</p>
+		`,
+		"blocked",
+	);
+	syncStepperUI(state);
+
+	return true;
+}
+
+function renderCompletedBookingState(state: BookingState): boolean {
+	if (
+		!state.slotsBodyEl ||
+		!state.bookingCompleted ||
+		!state.completedBooking
+	) {
+		return false;
+	}
+
+	// Reuse same transition pattern as availability↔details
+	state.root.classList.remove(
+		"is-inline-transitioning-out",
+		"is-inline-transitioning-in",
+	);
+	state.root.classList.add("is-inline-transitioning-out");
+	const slotsBodyEl = state.slotsBodyEl;
+
+	window.setTimeout(() => {
+		if (!slotsBodyEl) {
+			return;
+		}
+
+		slotsBodyEl.innerHTML = renderSlotsPanel(
+			renderSuccessPanel(state),
+			"success",
 		);
-		state.root.classList.add("is-inline-transitioning-out");
+		syncStepperUI(state);
 
-		window.setTimeout(() => {
-			state.slotsBodyEl.innerHTML = renderSlotsPanel(
-				renderSuccessPanel(state),
-				"success",
+		window.requestAnimationFrame(() => {
+			state.root.classList.remove("is-inline-transitioning-out");
+			state.root.classList.add("is-inline-transitioning-in");
+
+			// Trigger success-specific child animations alongside the panel fade-in
+			const successCard = state.slotsBodyEl?.querySelector<HTMLElement>(
+				".hbe-booking__booking-card--success",
 			);
-			attachSlotInteractions(state, availableSlots);
-			syncStepperUI(state);
+			if (successCard) {
+				successCard.classList.add("is-entering");
+			}
 
-			window.requestAnimationFrame(() => {
-				state.root.classList.remove("is-inline-transitioning-out");
-				state.root.classList.add("is-inline-transitioning-in");
+			window.setTimeout(() => {
+				state.root.classList.remove("is-inline-transitioning-in");
+			}, 420);
+		});
+	}, 180);
 
-				// Trigger success-specific child animations alongside the panel fade-in
-				const successCard =
-					state.slotsBodyEl.querySelector<HTMLElement>(
-						".hbe-booking__booking-card--success",
-					);
-				if (successCard) {
-					successCard.classList.add("is-entering");
-				}
+	return true;
+}
 
-				window.setTimeout(() => {
-					state.root.classList.remove("is-inline-transitioning-in");
-				}, 420);
-			});
-		}, 180);
+function renderDetailsSlotsState(
+	state: BookingState,
+	{
+		noticeMarkup,
+		serviceLabel,
+		dateHeading,
+		priceLabel,
+	}: {
+		noticeMarkup: string;
+		serviceLabel: string | null;
+		dateHeading: string;
+		priceLabel: string;
+	},
+): boolean {
+	if (
+		!state.slotsBodyEl ||
+		state.bookingStep !== "details" ||
+		!state.selectedSlot
+	) {
+		return false;
+	}
+
+	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+		`
+			${noticeMarkup}
+			${renderBookingPanel(state, {
+				serviceLabel,
+				dateHeading,
+				priceLabel,
+			})}
+		`,
+		"details",
+	);
+
+	// Commit stepper DOM write BEFORE starting the animation so the mutation
+	// doesn't steal a frame mid-transition.
+	syncStepperUI(state);
+	attachNoticeAnimationCleanup(state);
+	state.bookingNoticeShouldAnimate = false;
+	state.bookingNoticeShouldWiggle = false;
+
+	return true;
+}
+
+function renderNoAvailableSlotsState(
+	state: BookingState,
+	availableSlots: BookingSlot[],
+	dateHeading: string,
+): boolean {
+	if (!state.slotsBodyEl || availableSlots.length > 0) {
+		return false;
+	}
+
+	state.renderedSlots = [];
+	setBookingStep(state, "availability");
+	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+		`
+			<h3 class="hbe-booking__title">${escapeHtml(dateHeading)}</h3>
+			<p class="hbe-booking__copy">No times are available on this date.</p>
+		`,
+		"availability",
+	);
+	syncStepperUI(state);
+
+	return true;
+}
+
+function syncClearedSlotSelection(
+	state: BookingState,
+	availableSlots: BookingSlot[],
+) {
+	const selectedSlot = state.selectedSlot;
+	const slotSelectionWasCleared =
+		selectedSlot !== null &&
+		!availableSlots.some((slot) => isSameSlot(slot, selectedSlot));
+
+	if (!slotSelectionWasCleared) {
 		return;
 	}
 
-	if (state.bookingStep === "details" && state.selectedSlot) {
-		state.slotsBodyEl.innerHTML = renderSlotsPanel(
-			`
-				${noticeMarkup}
-				${renderBookingPanel(state, {
-					serviceLabel,
-					dateHeading,
-					priceLabel,
-				})}
-			`,
-			"details",
-		);
+	state.selectedSlot = null;
+	setBookingStep(state, "availability");
+	renderCalendarMeta(state);
+}
 
-		attachNoticeAnimationCleanup(state);
-		state.bookingNoticeShouldAnimate = false;
-		state.bookingNoticeShouldWiggle = false;
-		attachSlotInteractions(state, availableSlots);
-		syncStepperUI(state);
-		return;
+function renderBookingNoticeMarkup(state: BookingState): string {
+	if (!state.bookingNotice) {
+		return "";
 	}
 
-	if (availableSlots.length === 0) {
-		setBookingStep(state, "availability");
-		state.slotsBodyEl.innerHTML = renderSlotsPanel(
-			`
-				<h3 class="hbe-booking__title">${escapeHtml(dateHeading)}</h3>
-				<p class="hbe-booking__copy">No times are available on this date.</p>
-			`,
-			"availability",
-		);
-		syncStepperUI(state);
-		return;
-	}
+	const enteringClass = state.bookingNoticeShouldAnimate ? " is-entering" : "";
+	const wiggleClass = state.bookingNoticeShouldWiggle ? " is-wiggling" : "";
 
+	return `<div class="hbe-booking__booking-notice-wrap${enteringClass}">
+		<div class="hbe-booking__booking-notice is-${escapeAttribute(state.bookingNotice.type)}${enteringClass}${wiggleClass}">
+			${escapeHtml(state.bookingNotice.message)}
+		</div>
+	</div>`;
+}
+
+function renderAvailableSlotsMarkup(
+	state: BookingState,
+	availableSlots: BookingSlot[],
+): string {
 	const slotsMarkup = availableSlots
 		.map((slot, index) => {
 			const isSelected =
@@ -1773,48 +2164,47 @@ function renderSlots(state: BookingState) {
 			`;
 		})
 		.join("");
-
-	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+	const backButtonMarkup = isStepperMode(state)
+		? `
+			<button
+				type="button"
+				class="hbe-booking__details-button is-secondary"
+				data-stepper-target="calendar"
+			>
+				Back
+			</button>
 		`
-			<div class="hbe-booking__slots-header">
-				<h3 class="hbe-booking__title">${escapeHtml(shortWeekdayDateFormatter.format(state.selectedDate))}</h3>
-				${renderTimeFormatToggle(state)}
-			</div>
-			<div class="hbe-booking__slot-list">${slotsMarkup}</div>
-			<div class="hbe-booking__slot-actions">
-				${
-					isStepperMode(state)
-						? `
-							<button
-								type="button"
-								class="hbe-booking__details-button is-secondary"
-								data-stepper-target="calendar"
-							>
-								Back
-							</button>
-						`
-						: ""
-				}
-				<button
-					type="button"
-					class="hbe-booking__details-button"
-					${isStepperMode(state) ? 'data-stepper-target="details"' : 'data-booking-step="details"'}
-					${state.selectedSlot ? "" : "disabled"}
-				>
-					Continue
-				</button>
-			</div>
-		`,
-		"availability",
-	);
+		: "";
+	const continueTargetMarkup = isStepperMode(state)
+		? 'data-stepper-target="details"'
+		: 'data-booking-step="details"';
 
-	attachSlotInteractions(state, availableSlots);
-	syncStepperUI(state);
+	return `
+		<div class="hbe-booking__slots-header">
+			<h3 class="hbe-booking__title">${escapeHtml(shortWeekdayDateFormatter.format(state.selectedDate))}</h3>
+			${renderTimeFormatToggle(state)}
+		</div>
+		<div class="hbe-booking__slot-list">${slotsMarkup}</div>
+		<div class="hbe-booking__slot-actions">
+			${backButtonMarkup}
+			<button
+				type="button"
+				class="hbe-booking__details-button"
+				${continueTargetMarkup}
+				${state.selectedSlot ? "" : "disabled"}
+			>
+				Continue
+			</button>
+		</div>
+	`;
+}
 
+function animateRenderedSlotItems(slotsBodyEl: HTMLElement) {
 	// Animate each slot item in using WAAPI — more reliable than CSS animations
 	// on freshly-injected DOM (avoids transition:all conflicts and reflow timing issues).
-	const slotItems =
-		state.slotsBodyEl.querySelectorAll<HTMLElement>(".hbe-booking__slot-item");
+	const slotItems = slotsBodyEl.querySelectorAll<HTMLElement>(
+		".hbe-booking__slot-item",
+	);
 	slotItems.forEach((item, i) => {
 		item.animate(
 			[
@@ -1829,6 +2219,171 @@ function renderSlots(state: BookingState) {
 			},
 		);
 	});
+}
+
+function renderSlots(state: BookingState) {
+	renderFirstColumn(state);
+
+	if (!state.slotsBodyEl || !state.calendar) {
+		return;
+	}
+
+	if (
+		renderAdminOnlySlotsState(state) ||
+		renderUnselectedDateSlotsState(state)
+	) {
+		return;
+	}
+
+	const dateKey = toDateKey(state.selectedDate);
+	const matchingException = getExceptionForDate(
+		state.calendar.settings,
+		dateKey,
+	);
+
+	if (renderExceptionSlotsState(state, matchingException)) {
+		return;
+	}
+
+	const requiredMinutes = getRequiredMinutes(state);
+	const availableSlots = getBookableSlotsForDate(
+		state.calendar.settings,
+		state.selectedDate,
+		requiredMinutes,
+		state.bookings,
+	);
+	state.renderedSlots = availableSlots;
+	syncClearedSlotSelection(state, availableSlots);
+
+	const dateHeading = longDateFormatter.format(state.selectedDate);
+	const priceLabel = getSelectedPriceLabel(state);
+	const serviceLabel = getSelectedServiceLabel(state);
+	const noticeMarkup = renderBookingNoticeMarkup(state);
+
+	if (renderCompletedBookingState(state)) {
+		return;
+	}
+
+	if (
+		renderDetailsSlotsState(state, {
+			noticeMarkup,
+			serviceLabel,
+			dateHeading,
+			priceLabel,
+		})
+	) {
+		return;
+	}
+
+	if (renderNoAvailableSlotsState(state, availableSlots, dateHeading)) {
+		return;
+	}
+
+	state.slotsBodyEl.innerHTML = renderSlotsPanel(
+		renderAvailableSlotsMarkup(state, availableSlots),
+		"availability",
+	);
+
+	syncStepperUI(state);
+	animateRenderedSlotItems(state.slotsBodyEl);
+}
+
+function renderBookingSummaryMarkup(
+	summaryServiceLabel: string | null,
+	dateHeading: string,
+	timeLabel: string,
+	priceLabel: string,
+): string {
+	return `
+		<div class="hbe-booking__booking-summary">
+			<div class="hbe-booking__booking-kicker">Booking summary</div>
+			${summaryServiceLabel ? renderBookingSummaryRow("Service", summaryServiceLabel) : ""}
+			${renderBookingSummaryRow("Date", dateHeading)}
+			${renderBookingSummaryRow("Time", timeLabel)}
+			${renderBookingSummaryRow("Total Due", priceLabel, " is-total")}
+		</div>
+	`;
+}
+
+function renderBookingFieldsMarkup(state: BookingState): string {
+	const disabledMarkup = state.isSubmittingBooking ? "disabled" : "";
+
+	return `
+		<div class="hbe-booking__booking-fields">
+			<label class="hbe-booking__field hbe-booking__field--half">
+				<span>Full name</span>
+				<input
+					type="text"
+					value="${escapeAttribute(state.bookingForm.name)}"
+					data-booking-field="name"
+					placeholder="Your name"
+					${disabledMarkup}
+				/>
+			</label>
+			<label class="hbe-booking__field hbe-booking__field--half">
+				<span>Email address</span>
+				<input
+					type="email"
+					value="${escapeAttribute(state.bookingForm.email)}"
+					data-booking-field="email"
+					placeholder="you@example.com"
+					${disabledMarkup}
+				/>
+			</label>
+			<label class="hbe-booking__field hbe-booking__field--half">
+				<span>Phone number</span>
+				<input
+					type="tel"
+					value="${escapeAttribute(state.bookingForm.phone)}"
+					data-booking-field="phone"
+					placeholder="Optional"
+					${disabledMarkup}
+				/>
+			</label>
+			<label class="hbe-booking__field hbe-booking__field--full">
+				<span>Additional notes</span>
+				<textarea
+					rows="4"
+					data-booking-field="notes"
+					placeholder="Anything we should know?"
+					${disabledMarkup}
+				>${escapeHtml(state.bookingForm.notes)}</textarea>
+			</label>
+		</div>
+	`;
+}
+
+function renderBookingActionsMarkup(state: BookingState): string {
+	const backTargetMarkup = isStepperMode(state)
+		? 'data-stepper-target="slots"'
+		: 'data-booking-step="availability"';
+	const backLabel = isStepperMode(state) ? "Back to Time" : "Back to Calendar";
+	const submitLabel = state.isSubmittingBooking
+		? '<span class="hbe-booking__button-spinner" aria-hidden="true"></span><span>Confirming...</span>'
+		: "<span>Confirm booking</span>";
+	const submitDisabledMarkup = state.isSubmittingBooking
+		? 'disabled aria-disabled="true"'
+		: "";
+
+	return `
+		<div class="hbe-booking__booking-actions">
+			<button
+				type="button"
+				class="hbe-booking__details-button is-secondary"
+				${backTargetMarkup}
+			>
+				${backLabel}
+			</button>
+			<button
+				type="submit"
+				class="hbe-booking__confirm-button${state.isSubmittingBooking ? " is-loading" : ""}"
+				data-booking-submit="true"
+				${submitDisabledMarkup}
+			>
+				${submitLabel}
+			</button>
+		</div>
+	`;
 }
 
 function renderBookingPanel(
@@ -1856,94 +2411,21 @@ function renderBookingPanel(
 				)
 			: null);
 	const summaryMarkup = state.showReservationSummary
-		? `
-			<div class="hbe-booking__booking-summary">
-				<div class="hbe-booking__booking-kicker">Booking summary</div>
-				${summaryServiceLabel ? renderBookingSummaryRow("Service", summaryServiceLabel) : ""}
-				${renderBookingSummaryRow("Date", dateHeading)}
-				${renderBookingSummaryRow("Time", timeLabel)}
-				${
-					state.showReservationSummary
-						? `
-							${renderBookingSummaryRow("Total Due", priceLabel, " is-total")}
-						`
-						: ""
-				}
-			</div>
-		`
+		? renderBookingSummaryMarkup(
+				summaryServiceLabel,
+				dateHeading,
+				timeLabel,
+				priceLabel,
+			)
 		: "";
 
 	return `
 		<form class="hbe-booking__booking-card hbe-booking__booking-form" data-booking-form="true" ${state.isSubmittingBooking ? 'aria-busy="true"' : ""} novalidate>
 			<div class="hbe-booking__booking-scroll">
 				${summaryMarkup}
-				<div class="hbe-booking__booking-fields">
-					<label class="hbe-booking__field hbe-booking__field--half">
-						<span>Full name</span>
-						<input
-							type="text"
-							value="${escapeAttribute(state.bookingForm.name)}"
-							data-booking-field="name"
-							placeholder="Your name"
-							${state.isSubmittingBooking ? "disabled" : ""}
-						/>
-					</label>
-					<label class="hbe-booking__field hbe-booking__field--half">
-						<span>Email address</span>
-						<input
-							type="email"
-							value="${escapeAttribute(state.bookingForm.email)}"
-							data-booking-field="email"
-							placeholder="you@example.com"
-							${state.isSubmittingBooking ? "disabled" : ""}
-						/>
-					</label>
-					<label class="hbe-booking__field hbe-booking__field--half">
-						<span>Phone number</span>
-						<input
-							type="tel"
-							value="${escapeAttribute(state.bookingForm.phone)}"
-							data-booking-field="phone"
-							placeholder="Optional"
-							${state.isSubmittingBooking ? "disabled" : ""}
-						/>
-					</label>
-					<label class="hbe-booking__field hbe-booking__field--full">
-						<span>Additional notes</span>
-						<textarea
-							rows="4"
-							data-booking-field="notes"
-							placeholder="Anything we should know?"
-							${state.isSubmittingBooking ? "disabled" : ""}
-						>${escapeHtml(state.bookingForm.notes)}</textarea>
-					</label>
-				</div>
+				${renderBookingFieldsMarkup(state)}
 			</div>
-			<div class="hbe-booking__booking-actions">
-				<button
-					type="button"
-					class="hbe-booking__details-button is-secondary"
-					${
-						isStepperMode(state)
-							? 'data-stepper-target="slots"'
-							: 'data-booking-step="availability"'
-					}
-				>
-					${isStepperMode(state) ? "Back to Time" : "Back to Calendar"}
-				</button>
-				<button
-					type="submit"
-					class="hbe-booking__confirm-button${state.isSubmittingBooking ? " is-loading" : ""}"
-					data-booking-submit="true"
-					${state.isSubmittingBooking ? 'disabled aria-disabled="true"' : ""}
-				>
-					${
-						state.isSubmittingBooking
-							? '<span class="hbe-booking__button-spinner" aria-hidden="true"></span><span>Confirming...</span>'
-							: "<span>Confirm booking</span>"
-					}
-				</button>
-			</div>
+			${renderBookingActionsMarkup(state)}
 			<p class="hbe-booking__booking-policy">Your booking details will appear here once the reservation is confirmed.</p>
 		</form>
 	`;
@@ -1961,7 +2443,6 @@ function renderBookingSummaryRow(
 		</div>
 	`;
 }
-
 
 function getSelectedServiceLabel(state: BookingState): string | null {
 	const selectedServices = getActiveServices(state);
@@ -2119,7 +2600,6 @@ function getInitials(name: string): string {
 		.join("");
 }
 
-
 function renderSuccessCard(completedBooking: CompletedBookingState): string {
 	const noteItems = completedBooking.notes
 		.split(/\r?\n/)
@@ -2178,8 +2658,7 @@ function renderSuccessCard(completedBooking: CompletedBookingState): string {
 function renderSuccessPanel(state: BookingState): string {
 	const title = state.successTitle.trim() || "Booking Confirmed";
 	const copy =
-		state.successText.trim() ||
-		"Your meeting has been successfully scheduled.";
+		state.successText.trim() || "Your meeting has been successfully scheduled.";
 	const buttonLabel = state.successButtonLabel.trim() || "Book another time";
 	const completedBooking = state.completedBooking;
 
@@ -2216,130 +2695,6 @@ function renderTimeFormatToggle(state: BookingState): string {
 			<button type="button" class="hbe-booking__time-toggle-btn${!is12 ? " is-active" : ""}" data-time-format="24h">24h</button>
 		</div>
 	`;
-}
-
-function attachTimeFormatToggle(state: BookingState) {
-	if (!state.slotsBodyEl) {
-		return;
-	}
-
-	state.slotsBodyEl
-		.querySelectorAll<HTMLButtonElement>("[data-time-format]")
-		.forEach((button) => {
-			button.addEventListener("click", () => {
-				const fmt = button.dataset.timeFormat;
-				if (fmt === "12h" || fmt === "24h") {
-					state.timeFormat = fmt;
-					renderSlots(state);
-				}
-			});
-		});
-}
-
-function attachSlotInteractions(state: BookingState, slots: BookingSlot[]) {
-	if (!state.slotsBodyEl) {
-		return;
-	}
-
-	state.slotsBodyEl
-		.querySelectorAll<HTMLButtonElement>("[data-slot-start][data-slot-end]")
-		.forEach((button) => {
-			button.addEventListener("click", () => {
-				const slot = slots.find(
-					(candidate) =>
-						candidate.start === button.dataset.slotStart &&
-						candidate.end === button.dataset.slotEnd,
-				);
-
-				if (!slot) {
-					return;
-				}
-
-				state.selectedSlot = slot;
-				setBookingNotice(state, null);
-				resetCompletedBooking(state);
-				if (shouldAutoAdvanceStepper(state)) {
-					setStepperDirection(state, "details");
-					state.stepperPanel = "details";
-					setBookingStep(state, "details");
-					renderCalendarMeta(state);
-					renderSlots(state);
-				} else {
-					setBookingStep(state, "availability");
-					renderCalendarMeta(state);
-
-					// Update selection in-place so the stagger animation doesn't replay
-					state.slotsBodyEl
-						?.querySelectorAll<HTMLButtonElement>("[data-slot-start][data-slot-end]")
-						.forEach((btn) => {
-							btn.classList.toggle(
-								"is-selected",
-								btn.dataset.slotStart === slot.start &&
-									btn.dataset.slotEnd === slot.end,
-							);
-						});
-					state.slotsBodyEl
-						?.querySelector<HTMLButtonElement>('[data-booking-step="details"]')
-						?.removeAttribute("disabled");
-				}
-			});
-		});
-
-	state.slotsBodyEl
-		.querySelector<HTMLButtonElement>('[data-booking-step="details"]')
-		?.addEventListener("click", () => {
-			if (!state.selectedSlot) {
-				return;
-			}
-
-			transitionInlineBookingStep(state, "details");
-		});
-
-	state.slotsBodyEl
-		.querySelector<HTMLButtonElement>('[data-booking-step="availability"]')
-		?.addEventListener("click", () => {
-			transitionInlineBookingStep(state, "availability");
-		});
-
-	state.slotsBodyEl
-		.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-			"[data-booking-field]",
-		)
-		.forEach((field) => {
-			field.addEventListener("input", () => {
-				const key = field.dataset.bookingField;
-
-				if (
-					key !== "name" &&
-					key !== "email" &&
-					key !== "phone" &&
-					key !== "notes"
-				) {
-					return;
-				}
-
-				state.bookingForm = {
-					...state.bookingForm,
-					[key]: field.value,
-				};
-			});
-		});
-
-	state.slotsBodyEl
-		.querySelector<HTMLFormElement>("[data-booking-form]")
-		?.addEventListener("submit", (event) => {
-			event.preventDefault();
-			void submitPublicBooking(state);
-		});
-
-	state.slotsBodyEl
-		.querySelector<HTMLButtonElement>("[data-booking-reset]")
-		?.addEventListener("click", () => {
-			transitionFromSuccessToAvailability(state);
-		});
-
-	attachTimeFormatToggle(state);
-	attachStepperInteractions(state);
 }
 
 async function submitPublicBooking(state: BookingState) {

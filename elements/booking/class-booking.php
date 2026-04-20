@@ -371,15 +371,14 @@ class Booking extends \Bricks\Element {
 			),
 		);
 
-		$this->controls['titleSize'] = array(
+		$this->controls['titleSizeEm'] = array(
 			'tab'     => 'style',
 			'group'   => 'bookingContent',
 			'label'   => esc_html__( 'Title size', 'h-bricks-elements' ),
 			'type'    => 'number',
-			'unit'    => 'px',
-			'min'     => 12,
-			'step'    => 1,
-			'default' => 20,
+			'unit'    => 'em',
+			'min'     => 0.5,
+			'step'    => 0.05,
 			'css'     => array(
 				array(
 					'selector' => '.hbe-booking__title',
@@ -388,15 +387,14 @@ class Booking extends \Bricks\Element {
 			),
 		);
 
-		$this->controls['bodySize'] = array(
+		$this->controls['bodySizeEm'] = array(
 			'tab'     => 'style',
 			'group'   => 'bookingContent',
 			'label'   => esc_html__( 'Body size', 'h-bricks-elements' ),
 			'type'    => 'number',
-			'unit'    => 'px',
-			'min'     => 12,
-			'step'    => 1,
-			'default' => 15,
+			'unit'    => 'em',
+			'min'     => 0.5,
+			'step'    => 0.05,
 			'css'     => array(
 				array(
 					'selector' => '.hbe-booking__copy, .hbe-booking__service-copy, .hbe-booking__service-meta, .hbe-booking__slot-summary, .hbe-booking__slot-date',
@@ -461,15 +459,14 @@ class Booking extends \Bricks\Element {
 			),
 		);
 
-		$this->controls['calendarCellFontSize'] = array(
+		$this->controls['calendarCellFontSizeEm'] = array(
 			'tab'     => 'style',
 			'group'   => 'bookingCalendar',
 			'label'   => esc_html__( 'Calendar cell font size', 'h-bricks-elements' ),
 			'type'    => 'number',
-			'unit'    => 'px',
-			'min'     => 10,
-			'step'    => 1,
-			'default' => 14,
+			'unit'    => 'em',
+			'min'     => 0.5,
+			'step'    => 0.05,
 			'css'     => array(
 				array(
 					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
