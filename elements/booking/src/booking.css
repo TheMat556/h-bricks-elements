@@ -2055,7 +2055,6 @@
 	}
 
 	.hbe-booking__booking-card--success {
-		flex-direction: column;
 		overflow-y: auto;
 	}
 

@@ -1267,9 +1267,8 @@ class Booking extends \Bricks\Element {
 			echo '<strong class="hbe-booking__status-title">' . esc_html__( 'Thursday, March 5', 'h-bricks-elements' ) . '</strong>';
 			echo '<span class="hbe-booking__status-copy">' . esc_html__( 'Preview card for the helper area below the calendar.', 'h-bricks-elements' ) . '</span>';
 		} else {
-			echo '<span class="hbe-booking__status-label">' . esc_html__( 'Loading', 'h-bricks-elements' ) . '</span>';
-			echo '<strong class="hbe-booking__status-title">' . esc_html__( 'Checking availability', 'h-bricks-elements' ) . '</strong>';
-			echo '<span class="hbe-booking__status-copy">' . esc_html__( 'Loading calendar...', 'h-bricks-elements' ) . '</span>';
+			/* Intentionally empty — JS renders the spinner overlay via [data-loading] and
+			 * populates this element only on error states (e.g. "Calendar unavailable"). */
 		}
 		echo '</div>';
 		echo '</section>';
