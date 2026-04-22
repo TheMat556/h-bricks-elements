@@ -125,12 +125,14 @@ class HBE_REST {
 							'sanitize_callback' => 'absint',
 						),
 						'start' => array(
-							'type'     => 'string',
-							'required' => false,
+							'type'              => 'string',
+							'required'          => false,
+							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
 						),
 						'end'   => array(
-							'type'     => 'string',
-							'required' => false,
+							'type'              => 'string',
+							'required'          => false,
+							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
 						),
 					),
 				),
@@ -222,12 +224,14 @@ class HBE_REST {
 							'sanitize_callback' => 'absint',
 						),
 						'start' => array(
-							'type'     => 'string',
-							'required' => false,
+							'type'              => 'string',
+							'required'          => false,
+							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
 						),
 						'end'   => array(
-							'type'     => 'string',
-							'required' => false,
+							'type'              => 'string',
+							'required'          => false,
+							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
 						),
 					),
 				),
@@ -284,6 +288,21 @@ class HBE_REST {
 					'methods'             => WP_REST_Server::EDITABLE,
 					'callback'            => array( __CLASS__, 'update_email_template' ),
 					'permission_callback' => array( __CLASS__, 'can_manage_admin' ),
+					'args'                => array(
+						'template' => array(
+							'type'              => 'object',
+							'required'          => false,
+							'sanitize_callback' => function ( $value ) {
+								return is_array( $value ) ? $value : array();
+							},
+							'validate_callback' => function ( $value ) {
+								if ( ! is_array( $value ) ) {
+									return new WP_Error( 'invalid_template', 'template must be an object.', array( 'status' => 400 ) );
+								}
+								return true;
+							},
+						),
+					),
 				),
 			)
 		);
@@ -756,6 +775,30 @@ class HBE_REST {
 			),
 			201
 		);
+	}
+
+	/**
+	 * Validates a date/datetime query parameter.
+	 * Accepts Y-m-d dates and ISO 8601 datetime strings (e.g. 2026-04-12T22:00:00.000Z).
+	 *
+	 * @param mixed $value Parameter value.
+	 * @return true|WP_Error
+	 */
+	public static function validate_date_param( $value ) {
+		if ( ! is_string( $value ) || '' === trim( $value ) ) {
+			return new WP_Error( 'invalid_date', 'Date parameter must be a non-empty string.', array( 'status' => 400 ) );
+		}
+
+		if ( DateTime::createFromFormat( 'Y-m-d', $value ) ) {
+			return true;
+		}
+
+		try {
+			new DateTime( $value );
+			return true;
+		} catch ( Exception $e ) {
+			return new WP_Error( 'invalid_date', 'Date must be in Y-m-d or ISO 8601 format.', array( 'status' => 400 ) );
+		}
 	}
 
 	/**

@@ -218,7 +218,6 @@ class HBE_Admin {
 			'restNonce'         => wp_create_nonce( 'wp_rest' ),
 			'pluginUrl'         => HBE_PLUGIN_URL,
 			'calendarPostType'  => HBE_Calendar_Post_Type::POST_TYPE,
-			'bookingsTable'     => HBE_Bookings_Table::get_name(),
 			'initialCalendars'  => $calendars,
 			'selectedCalendarId' => ! empty( $calendars ) ? (int) $calendars[0]['id'] : 0,
 			'siteLogoUrl'       => esc_url( HBE_Plugin::get_site_logo_url() ),

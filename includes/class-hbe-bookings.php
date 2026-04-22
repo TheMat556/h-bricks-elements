@@ -26,8 +26,6 @@ class HBE_Bookings {
 		global $wpdb;
 
 		$table_name = HBE_Bookings_Table::get_name();
-		$query      = "SELECT * FROM {$table_name} WHERE calendar_id = %d";
-		$params     = array( $calendar_id );
 
 		if ( null !== $start_iso && null !== $end_iso ) {
 			$start_datetime = self::parse_request_datetime( $start_iso );
@@ -41,14 +39,26 @@ class HBE_Bookings {
 				);
 			}
 
-			$query   .= ' AND start_datetime < %s AND end_datetime > %s';
-			$params[] = $end_datetime;
-			$params[] = $start_datetime;
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE calendar_id = %d AND start_datetime < %s AND end_datetime > %s ORDER BY start_datetime ASC',
+					$table_name,
+					$calendar_id,
+					$end_datetime,
+					$start_datetime
+				),
+				ARRAY_A
+			);
+		} else {
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE calendar_id = %d ORDER BY start_datetime ASC',
+					$table_name,
+					$calendar_id
+				),
+				ARRAY_A
+			);
 		}
-
-		$query .= ' ORDER BY start_datetime ASC';
-
-		$results = $wpdb->get_results( $wpdb->prepare( $query, $params ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 		if ( ! is_array( $results ) ) {
 			return array();
@@ -506,13 +516,24 @@ class HBE_Bookings {
 			return null;
 		}
 
-		$timestamp = strtotime( $value );
+		$dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $value, new DateTimeZone( 'UTC' ) );
 
-		if ( false === $timestamp ) {
-			return null;
+		if ( false === $dt ) {
+			$dt = DateTime::createFromFormat( 'Y-m-d', $value, new DateTimeZone( 'UTC' ) );
+			if ( false === $dt ) {
+				// Fall back to ISO 8601 parsing (e.g. 2026-04-12T22:00:00.000Z).
+				try {
+					$dt = new DateTime( $value );
+					$dt->setTimezone( new DateTimeZone( 'UTC' ) );
+				} catch ( Exception $e ) {
+					return null;
+				}
+			} else {
+				$dt->setTime( 0, 0, 0 );
+			}
 		}
 
-		return gmdate( 'Y-m-d H:i:s', $timestamp );
+		return $dt->format( 'Y-m-d H:i:s' );
 	}
 
 	/**

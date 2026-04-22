@@ -8,8 +8,8 @@ import {
 	InputNumber,
 	Switch,
 	Tag,
-	theme,
 	Typography,
+	theme,
 } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -142,7 +142,12 @@ function LogoPicker({
 	attachmentId: number;
 	logoWidth: number;
 	logoHeight: number;
-	onChange: (next: { url: string; attachmentId: number; logoWidth?: number; logoHeight?: number }) => void;
+	onChange: (next: {
+		url: string;
+		attachmentId: number;
+		logoWidth?: number;
+		logoHeight?: number;
+	}) => void;
 }) {
 	const { token } = theme.useToken();
 	const openMedia = () => {
@@ -219,10 +224,7 @@ function LogoPicker({
 					{value ? tr("Change logo") : tr("Select logo")}
 				</Button>
 				{value ? (
-					<Button
-						danger
-						onClick={() => onChange({ url: "", attachmentId: 0 })}
-					>
+					<Button danger onClick={() => onChange({ url: "", attachmentId: 0 })}>
 						{tr("Remove")}
 					</Button>
 				) : null}
@@ -230,7 +232,9 @@ function LogoPicker({
 			{value ? (
 				<Flex gap={12} align="center" style={{ marginTop: 12 }} wrap="wrap">
 					<div>
-						<Typography.Text style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+						<Typography.Text
+							style={{ display: "block", marginBottom: 4, fontSize: 12 }}
+						>
 							{tr("Width (px)")}
 						</Typography.Text>
 						<InputNumber
@@ -244,7 +248,9 @@ function LogoPicker({
 						/>
 					</div>
 					<div>
-						<Typography.Text style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+						<Typography.Text
+							style={{ display: "block", marginBottom: 4, fontSize: 12 }}
+						>
 							{tr("Height (px)")}
 						</Typography.Text>
 						<InputNumber
@@ -632,15 +638,26 @@ export function EmailDesigner({
 			</div>
 
 			{/* Right pane — live preview */}
-			<div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column" }}>
+			<div
+				style={{
+					flex: "1 1 0",
+					minWidth: 0,
+					display: "flex",
+					flexDirection: "column",
+				}}
+			>
 				<Flex
 					align="center"
 					justify="space-between"
 					gap={12}
 					style={{ marginBottom: 4 }}
 				>
-					<SectionLabel style={{ margin: 0 }}>{tr("Live Preview")}</SectionLabel>
-					<Tag color={statusMeta.color} style={{ marginBottom: 12 }}>{statusMeta.label}</Tag>
+					<SectionLabel style={{ margin: 0 }}>
+						{tr("Live Preview")}
+					</SectionLabel>
+					<Tag color={statusMeta.color} style={{ marginBottom: 12 }}>
+						{statusMeta.label}
+					</Tag>
 				</Flex>
 				<Typography.Text
 					type="secondary"

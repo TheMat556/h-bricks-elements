@@ -1,4 +1,12 @@
-import { Button, Card, ConfigProvider, Flex, Result, theme, Typography } from "antd";
+import {
+	Button,
+	Card,
+	ConfigProvider,
+	Flex,
+	Result,
+	Typography,
+	theme,
+} from "antd";
 import { createRoot } from "react-dom/client";
 
 interface CancelData {
@@ -24,7 +32,12 @@ function Logo({ url, siteName }: { url: string; siteName: string }) {
 		<img
 			src={url}
 			alt={siteName}
-			style={{ height: 40, maxWidth: 160, objectFit: "contain", marginBottom: 8 }}
+			style={{
+				height: 40,
+				maxWidth: 160,
+				objectFit: "contain",
+				marginBottom: 8,
+			}}
 		/>
 	);
 }
@@ -68,19 +81,18 @@ function CancelApp({ data }: { data: CancelData }) {
 							style={{ padding: 0, marginBottom: 32 }}
 						/>
 						<Flex justify="center" align="center" gap={16} wrap>
-							<form method="post" action={data.action} style={{ display: "inline" }}>
+							<form
+								method="post"
+								action={data.action}
+								style={{ display: "inline" }}
+							>
 								<input type="hidden" name="hbe_confirm_cancel" value="1" />
-								{/* eslint-disable-next-line react/no-danger */}
-								{/* biome-ignore lint/security/noDangerouslySetInnerHtml: WordPress nonce field is server-generated */}
-								<div dangerouslySetInnerHTML={{ __html: data.nonceField }} />
+								<input type="hidden" name="_wpnonce" value={data.nonce} />
 								<Button type="primary" danger htmlType="submit" size="large">
 									Yes, cancel my booking
 								</Button>
 							</form>
-							<Button
-								size="large"
-								href={data.homeUrl}
-							>
+							<Button size="large" href={data.homeUrl}>
 								No, keep it
 							</Button>
 						</Flex>
