@@ -43,10 +43,26 @@ class HBE_Calendar_Settings {
 				'maxAdvanceDays'  => 0,
 			),
 			'mailSettings'  => array(
-				'enabled'   => false,
+				'enabled'   => true,
 				'fromName'  => '',
 				'fromEmail' => '',
 				'subject'   => 'Booking confirmation',
+				'template'  => array(
+					'primaryColor'       => '#2563eb',
+					'backgroundColor'    => '#f0f4f8',
+					'logoUrl'            => '',
+					'logoAttachmentId'   => 0,
+					'greeting'           => 'Hi {{customerName}},',
+					'body'               => 'Your booking has been confirmed. We look forward to seeing you!',
+					'footer'             => '© {{calendarName}} — Please do not reply to this email.',
+					'showBookingDetails' => true,
+					'compiledHtml'       => '',
+					'compiledHash'       => '',
+					'compiledVersion'    => HBE_Booking_Mail::TEMPLATE_VERSION,
+					'compileStatus'      => 'stale',
+					'compiledAt'         => '',
+					'lastError'          => '',
+				),
 			),
 			'workingHours'  => array(
 				'monday'    => array(
@@ -143,9 +159,14 @@ class HBE_Calendar_Settings {
 	 *
 	 * @param int                $calendar_id Calendar post ID.
 	 * @param array<string,mixed> $settings   Settings to persist.
-	 * @return array<string,mixed>
+	 * @return array<string,mixed>|WP_Error
 	 */
-	public static function update( int $calendar_id, array $settings ): array {
+	public static function update( int $calendar_id, array $settings ) {
+		$validation = self::validate_for_update( $settings );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
 		$sanitized_settings = self::sanitize( $settings );
 
 		update_post_meta( $calendar_id, self::META_KEY, $sanitized_settings );
@@ -202,6 +223,30 @@ class HBE_Calendar_Settings {
 				isset( $settings['selectionMode'] ) ? (string) $settings['selectionMode'] : 'single'
 			),
 		);
+	}
+
+	/**
+	 * Validates settings before they are persisted.
+	 *
+	 * @param array<string,mixed> $settings Raw settings.
+	 * @return WP_Error|null
+	 */
+	private static function validate_for_update( array $settings ) {
+		$mail_settings = isset( $settings['mailSettings'] ) && is_array( $settings['mailSettings'] )
+			? $settings['mailSettings']
+			: array();
+		$template      = isset( $mail_settings['template'] ) && is_array( $mail_settings['template'] )
+			? $mail_settings['template']
+			: array();
+
+		if ( ! empty( $mail_settings['subject'] ) ) {
+			$subject_validation = HBE_Booking_Mail::validate_subject_placeholders( (string) $mail_settings['subject'] );
+			if ( is_wp_error( $subject_validation ) ) {
+				return $subject_validation;
+			}
+		}
+
+		return HBE_Booking_Mail::validate_template_payload( $template );
 	}
 
 	/**
@@ -291,12 +336,70 @@ class HBE_Calendar_Settings {
 	 * @return array<string,mixed>
 	 */
 	private static function sanitize_mail_settings( array $mail_settings ): array {
+		$defaults = self::get_defaults()['mailSettings'];
+
 		return array(
-			'enabled'   => ! empty( $mail_settings['enabled'] ),
+			'enabled'   => array_key_exists( 'enabled', $mail_settings )
+				? ! empty( $mail_settings['enabled'] )
+				: (bool) $defaults['enabled'],
 			'fromName'  => isset( $mail_settings['fromName'] ) ? sanitize_text_field( (string) $mail_settings['fromName'] ) : '',
 			'fromEmail' => isset( $mail_settings['fromEmail'] ) ? sanitize_email( (string) $mail_settings['fromEmail'] ) : '',
-			'subject'   => isset( $mail_settings['subject'] ) ? sanitize_text_field( (string) $mail_settings['subject'] ) : 'Booking confirmation',
+			'subject'   => isset( $mail_settings['subject'] ) ? sanitize_text_field( (string) $mail_settings['subject'] ) : (string) $defaults['subject'],
+			'template'  => self::sanitize_mail_template(
+				isset( $mail_settings['template'] ) && is_array( $mail_settings['template'] )
+					? $mail_settings['template']
+					: array()
+			),
 		);
+	}
+
+	/**
+	 * Sanitizes the email template sub-object (public for use by REST handler and other classes).
+	 *
+	 * @param array<string,mixed> $template Raw template data.
+	 * @return array<string,mixed>
+	 */
+	public static function sanitize_email_template( array $template ): array {
+		return self::sanitize_mail_template( $template );
+	}
+
+	/**
+	 * @param array<string,mixed> $template Raw template data.
+	 * @return array<string,mixed>
+	 */
+	private static function sanitize_mail_template( array $template ): array {
+		$defaults = self::get_defaults()['mailSettings']['template'];
+		$sanitized = array(
+			'primaryColor'       => isset( $template['primaryColor'] )
+				? sanitize_hex_color( (string) $template['primaryColor'] ) ?? $defaults['primaryColor']
+				: $defaults['primaryColor'],
+			'backgroundColor'    => isset( $template['backgroundColor'] )
+				? sanitize_hex_color( (string) $template['backgroundColor'] ) ?? $defaults['backgroundColor']
+				: $defaults['backgroundColor'],
+			'logoUrl'            => isset( $template['logoUrl'] )
+				? esc_url_raw( (string) $template['logoUrl'] )
+				: '',
+			'logoAttachmentId'   => isset( $template['logoAttachmentId'] )
+				? absint( $template['logoAttachmentId'] )
+				: 0,
+			'greeting'           => isset( $template['greeting'] )
+				? sanitize_text_field( (string) $template['greeting'] )
+				: $defaults['greeting'],
+			'body'               => isset( $template['body'] )
+				? sanitize_textarea_field( (string) $template['body'] )
+				: $defaults['body'],
+			'footer'             => isset( $template['footer'] )
+				? sanitize_text_field( (string) $template['footer'] )
+				: $defaults['footer'],
+			'showBookingDetails' => isset( $template['showBookingDetails'] )
+				? (bool) $template['showBookingDetails']
+				: (bool) $defaults['showBookingDetails'],
+			'compiledHtml'       => isset( $template['compiledHtml'] )
+				? (string) $template['compiledHtml']
+				: '',
+		);
+
+		return array_merge( $sanitized, HBE_Booking_Mail::build_template_metadata( $template ) );
 	}
 
 	/**

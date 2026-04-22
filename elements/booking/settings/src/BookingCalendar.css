@@ -252,10 +252,11 @@
 }
 
 /* ── Scrollbars ─────────────────────────────────────────────────── */
-.hbe-settings-calendar-theme .rbc-time-content::-webkit-scrollbar {
-	width: 6px;
-}
-
+/*
+ * Keep the native scrollbar width here. react-big-calendar offsets the
+ * header by the measured platform scrollbar size, and forcing a thinner
+ * scrollbar makes the header separators drift off the time-grid columns.
+ */
 .hbe-settings-calendar-theme .rbc-time-content::-webkit-scrollbar-track {
 	background: var(--hbe-calendar-bg-subtle);
 }

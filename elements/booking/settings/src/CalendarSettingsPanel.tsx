@@ -12,17 +12,21 @@ import {
 	Grid,
 	Input,
 	InputNumber,
-	Select,
+	message,
 	Segmented,
 	Spin,
 	Switch,
 	TimePicker,
 	Typography,
-	message,
 	theme,
 } from "antd";
 import dayjs from "dayjs";
 import { type ReactNode, useState } from "react";
+import {
+	createDefaultEmailTemplate,
+	EmailDesigner,
+	type EmailTemplateSettings,
+} from "./EmailDesigner";
 import { tr } from "./i18n";
 
 const { TextArea } = Input;
@@ -83,6 +87,7 @@ export interface CalendarSettings {
 		fromName: string;
 		fromEmail: string;
 		subject: string;
+		template: EmailTemplateSettings;
 	};
 	workingHours: Record<WeekdayKey, WorkingDaySettings>;
 	services: CalendarServiceSettings[];
@@ -138,10 +143,11 @@ export function createDefaultCalendarSettings(): CalendarSettings {
 			maxAdvanceDays: 0,
 		},
 		mailSettings: {
-			enabled: false,
+			enabled: true,
 			fromName: "",
 			fromEmail: "",
 			subject: tr("Booking confirmation"),
+			template: createDefaultEmailTemplate(),
 		},
 		workingHours: {
 			monday: { enabled: true, intervals: [{ start: "09:00", end: "17:00" }] },
@@ -199,22 +205,32 @@ export function CalendarSettingsPanel({
 	calendarId,
 	calendarName,
 	settings,
+	settingsDirty,
+	mode = "settings",
 	loading,
 	error,
 	restUrl,
 	restNonce,
 	onCalendarNameChange,
 	onChange,
+	globalTemplate,
+	globalTemplateDirty = false,
+	onGlobalTemplateChange,
 }: {
-	calendarId: number;
+		calendarId: number;
 	calendarName: string;
 	settings: CalendarSettings | null;
+	settingsDirty: boolean;
+	mode?: "settings" | "mailDesigner";
 	loading: boolean;
 	error: string;
 	restUrl: string;
 	restNonce: string;
 	onCalendarNameChange: (nextName: string) => void;
 	onChange: (nextSettings: CalendarSettings) => void;
+	globalTemplate?: EmailTemplateSettings | null;
+	globalTemplateDirty?: boolean;
+	onGlobalTemplateChange?: (next: EmailTemplateSettings) => void;
 }) {
 	const { token } = theme.useToken();
 	const screens = Grid.useBreakpoint();
@@ -388,7 +404,49 @@ export function CalendarSettingsPanel({
 		});
 	};
 
+	const updateEmailTemplate = (next: EmailTemplateSettings) => {
+		if (onGlobalTemplateChange) {
+			onGlobalTemplateChange(next);
+		} else if (settings) {
+			onChange({
+				...settings,
+				mailSettings: {
+					...settings.mailSettings,
+					template: next,
+				},
+			});
+		}
+	};
+
 	const handleSendTestMail = async () => {
+		const template = globalTemplate ?? settings?.mailSettings.template ?? createDefaultEmailTemplate();
+
+		if (template.compileStatus === "invalid") {
+			void messageApi.error(
+				template.lastError ||
+					tr("Fix the template compilation error before sending a test email."),
+			);
+			return;
+		}
+
+		if (template.compileStatus !== "compiled") {
+			void messageApi.warning(
+				tr(
+					"Wait for the email template to finish compiling, then save settings first.",
+				),
+			);
+			return;
+		}
+
+		if (settingsDirty || globalTemplateDirty) {
+			void messageApi.warning(
+				tr(
+					"Save settings first so the test email uses the latest designer version.",
+				),
+			);
+			return;
+		}
+
 		if (!testMailTo) {
 			void messageApi.warning(tr("Enter a recipient email address first."));
 			return;
@@ -415,9 +473,7 @@ export function CalendarSettingsPanel({
 				);
 			} else {
 				const body = (await response.json()) as { message?: string };
-				void messageApi.error(
-					body.message ?? tr("Failed to send test email."),
-				);
+				void messageApi.error(body.message ?? tr("Failed to send test email."));
 			}
 		} catch {
 			void messageApi.error(tr("Network error while sending test email."));
@@ -465,356 +521,617 @@ export function CalendarSettingsPanel({
 		on: tr("On"),
 		off: tr("Off"),
 	};
+	const isMailDesignerMode = mode === "mailDesigner";
+	const mailServiceSection = (
+		<Section
+			title={tr("Mail Service")}
+			description={tr(
+				"Booking confirmation emails are delivered via wp_mail(), using whatever SMTP plugin or mail configuration is active on your WordPress site.",
+			)}
+		>
+			<Flex vertical gap={16}>
+				<Flex align="center" justify="space-between" gap={16} wrap="wrap">
+					<div style={{ maxWidth: 520 }}>
+						<Typography.Text strong style={{ display: "block" }}>
+							{tr("Enable Email Notifications")}
+						</Typography.Text>
+						<Typography.Text type="secondary">
+							{tr(
+								"Send a booking confirmation email to the customer after each successful booking.",
+							)}
+						</Typography.Text>
+					</div>
+					<Switch
+						checked={settings.mailSettings.enabled}
+						onChange={(checked) => updateMailSettings({ enabled: checked })}
+					/>
+				</Flex>
+
+				<Flex gap={12} wrap="wrap">
+					<Input
+						placeholder={tr("From name")}
+						value={settings.mailSettings.fromName}
+						style={{ minWidth: 220, flex: 1 }}
+						onChange={(event) =>
+							updateMailSettings({ fromName: event.target.value })
+						}
+					/>
+					<Input
+						placeholder={tr("From email")}
+						value={settings.mailSettings.fromEmail}
+						style={{ minWidth: 220, flex: 1 }}
+						onChange={(event) =>
+							updateMailSettings({ fromEmail: event.target.value })
+						}
+					/>
+				</Flex>
+
+				<Input
+					placeholder={tr("Confirmation email subject")}
+					value={settings.mailSettings.subject}
+					onChange={(event) =>
+						updateMailSettings({ subject: event.target.value })
+					}
+				/>
+
+				<Flex gap={8} align="center" wrap="wrap">
+					<Input
+						type="email"
+						placeholder={tr("Recipient address for test email")}
+						value={testMailTo}
+						onChange={(e) => setTestMailTo(e.target.value)}
+						style={{ flex: 1, minWidth: 220 }}
+					/>
+					<Button
+						onClick={() => void handleSendTestMail()}
+						loading={testMailLoading}
+						disabled={
+							settingsDirty ||
+							settings.mailSettings.template.compileStatus !== "compiled"
+						}
+					>
+						{tr("Send Test Email")}
+					</Button>
+				</Flex>
+
+				<div
+					style={{
+						paddingTop: 16,
+						borderTop: `1px solid ${token.colorBorderSecondary}`,
+					}}
+				>
+					<Typography.Text
+						strong
+						style={{ display: "block", marginBottom: 12 }}
+					>
+						{tr("Email template")}
+					</Typography.Text>
+					<EmailDesigner
+						template={
+							settings.mailSettings.template ?? createDefaultEmailTemplate()
+						}
+						calendarName={calendarName}
+						isDirty={settingsDirty}
+						onChange={updateEmailTemplate}
+					/>
+				</div>
+			</Flex>
+		</Section>
+	);
 
 	return (
 		<>
+			{isMailDesignerMode ? (
+				<>
+					<div
+						style={{
+							minHeight: "100%",
+							padding: 24,
+						}}
+					>
+						<Flex vertical gap={16}>
+							<Flex
+								align="center"
+								gap={16}
+								style={{
+									background: token.colorBgContainer,
+									border: `1px solid ${token.colorBorderSecondary}`,
+									borderRadius: token.borderRadiusLG,
+									padding: 20,
+								}}
+							>
+								<div>
+									<Typography.Title level={4} style={{ margin: 0 }}>
+										{settings.icon
+											? `${settings.icon} ${calendarName}`
+											: calendarName}
+									</Typography.Title>
+									<Typography.Text type="secondary">
+										{tr(
+											"Design, preview and test the booking email that will be sent to customers.",
+										)}
+									</Typography.Text>
+								</div>
+							</Flex>
+
+							{error && <Alert type="error" showIcon message={error} />}
+
+							{mailServiceSection}
+						</Flex>
+					</div>
+					{messageContextHolder}
+				</>
+			) : (
+				<>
 			<div
 				style={{
 					minHeight: "100%",
 					padding: 24,
 				}}
 			>
-			<Flex vertical gap={16}>
-				<Flex
-					align="center"
-					gap={16}
-					style={{
-						background: token.colorBgContainer,
-						border: `1px solid ${token.colorBorderSecondary}`,
-						borderRadius: token.borderRadiusLG,
-						padding: 20,
-					}}
-				>
-					<div>
-						<Typography.Title level={4} style={{ margin: 0 }}>
-							{settings.icon
-								? `${settings.icon} ${calendarName}`
-								: calendarName}
-						</Typography.Title>
-						<Typography.Text type="secondary">
-							{tr(
-								"Manage working hours, services, booking rules and blocked dates.",
-							)}
-						</Typography.Text>
-					</div>
-				</Flex>
-
-				{error && <Alert type="error" showIcon message={error} />}
-
-				<Section
-					title={tr("Calendar Identity")}
-					description={tr(
-						"Keep the internal calendar name clear for your team, then choose the customer-facing labels shown in the booking flow.",
-					)}
-				>
-					<Flex vertical gap={12}>
+				<Flex vertical gap={16}>
+					<Flex
+						align="center"
+						gap={16}
+						style={{
+							background: token.colorBgContainer,
+							border: `1px solid ${token.colorBorderSecondary}`,
+							borderRadius: token.borderRadiusLG,
+							padding: 20,
+						}}
+					>
 						<div>
-							<Typography.Text
-								strong
-								style={{ display: "block", marginBottom: 8 }}
-							>
-								{tr("Internal calendar name")}
+							<Typography.Title level={4} style={{ margin: 0 }}>
+								{settings.icon
+									? `${settings.icon} ${calendarName}`
+									: calendarName}
+							</Typography.Title>
+							<Typography.Text type="secondary">
+								{tr(
+									"Manage working hours, services, booking rules and blocked dates.",
+								)}
 							</Typography.Text>
-							<Input
-								placeholder={tr("Calendar name")}
-								value={calendarName}
-								onChange={(event) => onCalendarNameChange(event.target.value)}
-							/>
 						</div>
-						<Typography.Text type="secondary">
-							{tr("Used in the admin area only. Keep it clear for your team.")}
-						</Typography.Text>
-						<div>
-							<Typography.Text
-								strong
-								style={{ display: "block", marginBottom: 8 }}
-							>
-								{tr("Icon Selection")}
+					</Flex>
+
+					{error && <Alert type="error" showIcon message={error} />}
+
+					<Section
+						title={tr("Calendar Identity")}
+						description={tr(
+							"Keep the internal calendar name clear for your team, then choose the customer-facing labels shown in the booking flow.",
+						)}
+					>
+						<Flex vertical gap={12}>
+							<div>
+								<Typography.Text
+									strong
+									style={{ display: "block", marginBottom: 8 }}
+								>
+									{tr("Internal calendar name")}
+								</Typography.Text>
+								<Input
+									placeholder={tr("Calendar name")}
+									value={calendarName}
+									onChange={(event) => onCalendarNameChange(event.target.value)}
+								/>
+							</div>
+							<Typography.Text type="secondary">
+								{tr(
+									"Used in the admin area only. Keep it clear for your team.",
+								)}
 							</Typography.Text>
-							<div
-								style={{
-									display: "grid",
-									gridTemplateColumns: screens.lg
-										? "repeat(6, minmax(0, 1fr))"
-										: "repeat(4, minmax(0, 1fr))",
-									gap: 8,
-									marginBottom: 10,
-								}}
-							>
-								{CALENDAR_ICON_OPTIONS.map((icon) => (
+							<div>
+								<Typography.Text
+									strong
+									style={{ display: "block", marginBottom: 8 }}
+								>
+									{tr("Icon Selection")}
+								</Typography.Text>
+								<div
+									style={{
+										display: "grid",
+										gridTemplateColumns: screens.lg
+											? "repeat(6, minmax(0, 1fr))"
+											: "repeat(4, minmax(0, 1fr))",
+										gap: 8,
+										marginBottom: 10,
+									}}
+								>
+									{CALENDAR_ICON_OPTIONS.map((icon) => (
+										<Button
+											key={icon}
+											type={settings.icon === icon ? "primary" : "default"}
+											onClick={() =>
+												onChange({
+													...settings,
+													icon,
+												})
+											}
+											style={{ height: 44, fontSize: 20 }}
+										>
+											{icon}
+										</Button>
+									))}
 									<Button
-										key={icon}
-										type={settings.icon === icon ? "primary" : "default"}
+										type={!settings.icon ? "primary" : "default"}
 										onClick={() =>
 											onChange({
 												...settings,
-												icon,
+												icon: "",
 											})
 										}
-										style={{ height: 44, fontSize: 20 }}
+										style={{ height: 44 }}
 									>
-										{icon}
+										{tr("None")}
 									</Button>
-								))}
-								<Button
-									type={!settings.icon ? "primary" : "default"}
-									onClick={() =>
+								</div>
+								<Typography.Text
+									type="secondary"
+									style={{ display: "block", marginBottom: 8 }}
+								>
+									{tr("Or enter a custom icon / emoji.")}
+								</Typography.Text>
+								<Input
+									maxLength={12}
+									placeholder={tr("e.g. 💇, 🦷, A")}
+									value={settings.icon}
+									onChange={(event) =>
 										onChange({
 											...settings,
-											icon: "",
+											icon: event.target.value,
 										})
 									}
-									style={{ height: 44 }}
-								>
-									{tr("None")}
-								</Button>
+								/>
 							</div>
-							<Typography.Text
-								type="secondary"
-								style={{ display: "block", marginBottom: 8 }}
-							>
-								{tr("Or enter a custom icon / emoji.")}
+							<Typography.Text type="secondary">
+								{tr(
+									"Leave the icon empty if you only want to show the calendar name.",
+								)}
 							</Typography.Text>
-							<Input
-								maxLength={12}
-								placeholder={tr("e.g. 💇, 🦷, A")}
-								value={settings.icon}
-								onChange={(event) =>
-									onChange({
-										...settings,
-										icon: event.target.value,
-									})
-								}
-							/>
-						</div>
-						<Typography.Text type="secondary">
-							{tr(
-								"Leave the icon empty if you only want to show the calendar name.",
-							)}
-						</Typography.Text>
-						<div
-							style={{
-								paddingTop: 12,
-								borderTop: `1px solid ${token.colorBorderSecondary}`,
-							}}
-						>
-							<Flex vertical gap={12}>
-								<div>
-									<Typography.Text
-										strong
-										style={{ display: "block", marginBottom: 8 }}
-									>
-										{tr("Public display name")}
+							<div
+								style={{
+									paddingTop: 12,
+									borderTop: `1px solid ${token.colorBorderSecondary}`,
+								}}
+							>
+								<Flex vertical gap={12}>
+									<div>
+										<Typography.Text
+											strong
+											style={{ display: "block", marginBottom: 8 }}
+										>
+											{tr("Public display name")}
+										</Typography.Text>
+										<Input
+											placeholder={tr("e.g. Matthias Hader")}
+											value={settings.publicBooking.displayName}
+											onChange={(event) =>
+												updatePublicBooking({
+													displayName: event.target.value,
+												})
+											}
+										/>
+										<Typography.Text type="secondary">
+											{tr(
+												"Shown to customers instead of the internal calendar name.",
+											)}
+										</Typography.Text>
+									</div>
+									<div>
+										<Typography.Text
+											strong
+											style={{ display: "block", marginBottom: 8 }}
+										>
+											{tr("Default meeting title")}
+										</Typography.Text>
+										<Input
+											placeholder={tr("e.g. Intro call")}
+											value={settings.publicBooking.defaultServiceLabel}
+											onChange={(event) =>
+												updatePublicBooking({
+													defaultServiceLabel: event.target.value,
+												})
+											}
+										/>
+										<Typography.Text type="secondary">
+											{tr("Used when no specific service title is selected.")}
+										</Typography.Text>
+									</div>
+									<div>
+										<Typography.Text
+											strong
+											style={{ display: "block", marginBottom: 8 }}
+										>
+											{tr("Meeting location")}
+										</Typography.Text>
+										<Input
+											placeholder={tr("e.g. Video call")}
+											value={settings.publicBooking.locationLabel}
+											onChange={(event) =>
+												updatePublicBooking({
+													locationLabel: event.target.value,
+												})
+											}
+										/>
+										<Typography.Text type="secondary">
+											{tr("Shown in the booking confirmation when relevant.")}
+										</Typography.Text>
+									</div>
+								</Flex>
+							</div>
+						</Flex>
+					</Section>
+
+					<Section
+						title={tr("Booking Rules")}
+						description={tr(
+							"Define how visitors may select services and whether the calendar allows overlapping or admin-only bookings.",
+						)}
+					>
+						<Flex vertical gap={18}>
+							<div>
+								<Typography.Text
+									strong
+									style={{ display: "block", marginBottom: 8 }}
+								>
+									{tr("Service Selection")}
+								</Typography.Text>
+								<Segmented
+									options={[
+										{ label: tr("Single Select"), value: "single" },
+										{ label: tr("Multi Select"), value: "multi" },
+									]}
+									value={settings.selectionMode}
+									onChange={(value) =>
+										onChange({
+											...settings,
+											selectionMode: value as CalendarSettings["selectionMode"],
+										})
+									}
+								/>
+							</div>
+
+							<Flex align="center" justify="space-between" gap={16} wrap="wrap">
+								<div style={{ maxWidth: 460 }}>
+									<Typography.Text strong style={{ display: "block" }}>
+										{tr("Allow Double Bookings")}
 									</Typography.Text>
-									<Input
-										placeholder={tr("e.g. Matthias Hader")}
-										value={settings.publicBooking.displayName}
-										onChange={(event) =>
-											updatePublicBooking({
-												displayName: event.target.value,
-											})
-										}
-									/>
 									<Typography.Text type="secondary">
 										{tr(
-											"Shown to customers instead of the internal calendar name.",
+											"If enabled, overlapping bookings may exist in the same calendar.",
 										)}
 									</Typography.Text>
 								</div>
-								<div>
-									<Typography.Text
-										strong
-										style={{ display: "block", marginBottom: 8 }}
-									>
-										{tr("Default meeting title")}
-									</Typography.Text>
-									<Input
-										placeholder={tr("e.g. Intro call")}
-										value={settings.publicBooking.defaultServiceLabel}
-										onChange={(event) =>
-											updatePublicBooking({
-												defaultServiceLabel: event.target.value,
-											})
-										}
-									/>
-									<Typography.Text type="secondary">
-										{tr("Used when no specific service title is selected.")}
-									</Typography.Text>
-								</div>
-								<div>
-									<Typography.Text
-										strong
-										style={{ display: "block", marginBottom: 8 }}
-									>
-										{tr("Meeting location")}
-									</Typography.Text>
-									<Input
-										placeholder={tr("e.g. Video call")}
-										value={settings.publicBooking.locationLabel}
-										onChange={(event) =>
-											updatePublicBooking({
-												locationLabel: event.target.value,
-											})
-										}
-									/>
-									<Typography.Text type="secondary">
-										{tr("Shown in the booking confirmation when relevant.")}
-									</Typography.Text>
-								</div>
+								<Switch
+									checked={settings.allowDoubleBookings}
+									onChange={(checked) =>
+										onChange({
+											...settings,
+											allowDoubleBookings: checked,
+										})
+									}
+								/>
 							</Flex>
+
+							<Flex align="center" justify="space-between" gap={16} wrap="wrap">
+								<div style={{ maxWidth: 460 }}>
+									<Typography.Text strong style={{ display: "block" }}>
+										{tr("Admin Only Bookings")}
+									</Typography.Text>
+									<Typography.Text type="secondary">
+										{tr(
+											"Reserve this calendar for admin-managed bookings only.",
+										)}
+									</Typography.Text>
+								</div>
+								<Switch
+									checked={settings.adminOnly}
+									onChange={(checked) =>
+										onChange({
+											...settings,
+											adminOnly: checked,
+										})
+									}
+								/>
+							</Flex>
+						</Flex>
+					</Section>
+
+					<Section
+						title={tr("Default Slot Timing")}
+						description={tr(
+							"Define the base slot footprint and how far ahead customers are allowed to book.",
+						)}
+					>
+						<Flex vertical gap={16}>
+							<Flex gap={12} wrap="wrap">
+								<InputNumber
+									min={1}
+									value={settings.slotSettings.sessionDuration}
+									addonBefore={tr("Session")}
+									addonAfter="min"
+									onChange={(value) =>
+										updateSlotSettings({
+											sessionDuration: Number(value ?? 60),
+										})
+									}
+								/>
+								<InputNumber
+									min={0}
+									value={settings.slotSettings.prepTime}
+									addonBefore={tr("Prep")}
+									addonAfter="min"
+									onChange={(value) =>
+										updateSlotSettings({
+											prepTime: Number(value ?? 0),
+										})
+									}
+								/>
+								<InputNumber
+									min={0}
+									value={settings.slotSettings.cleanupTime}
+									addonBefore={tr("Cleanup")}
+									addonAfter="min"
+									onChange={(value) =>
+										updateSlotSettings({
+											cleanupTime: Number(value ?? 0),
+										})
+									}
+								/>
+								<InputNumber
+									min={0}
+									value={settings.slotSettings.maxAdvanceDays}
+									addonBefore={tr("Book ahead")}
+									addonAfter="days"
+									onChange={(value) =>
+										updateSlotSettings({
+											maxAdvanceDays: Number(value ?? 0),
+										})
+									}
+								/>
+							</Flex>
+							<Alert
+								type="info"
+								showIcon
+								message={`${tr("Total slot footprint")}: ${totalDefaultSlotDuration} ${tr("minutes")}`}
+								description={
+									settings.slotSettings.maxAdvanceDays > 0
+										? getBookAheadDescription(
+												settings.slotSettings.maxAdvanceDays,
+											)
+										: tr(
+												"Set “Book ahead” to 0 to allow booking without an advance-day limit.",
+											)
+								}
+							/>
+						</Flex>
+					</Section>
+
+					<Section
+						title={tr("Working Hours")}
+						description={tr(
+							"Configure availability per weekday. Multiple intervals per day allow lunch breaks and split shifts.",
+						)}
+					>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: screens.lg
+									? "repeat(2, minmax(0, 1fr))"
+									: "minmax(0, 1fr)",
+								gap: 16,
+							}}
+						>
+							{WEEKDAY_ORDER.map((weekday) => {
+								const day = settings.workingHours[weekday];
+
+								return (
+									<div
+										key={weekday}
+										style={{
+											border: `1px solid ${token.colorBorderSecondary}`,
+											borderRadius: token.borderRadius,
+											padding: 16,
+										}}
+									>
+										<Flex
+											align="center"
+											justify="space-between"
+											wrap="wrap"
+											gap={12}
+											style={{ marginBottom: 12 }}
+										>
+											<Typography.Text strong>
+												{weekdayLabels[weekday]}
+											</Typography.Text>
+											<Switch
+												checked={day.enabled}
+												checkedChildren={availabilitySwitchLabels.on}
+												unCheckedChildren={availabilitySwitchLabels.off}
+												onChange={(enabled) =>
+													setWorkingDay(weekday, {
+														...day,
+														enabled,
+													})
+												}
+											/>
+										</Flex>
+
+										<Flex vertical gap={10}>
+											{day.intervals.map((interval, index) => (
+												<Flex
+													key={`${weekday}-${interval.start}-${interval.end}`}
+													align="center"
+													gap={10}
+													wrap="wrap"
+												>
+													<TimePicker
+														format="HH:mm"
+														minuteStep={15}
+														disabled={!day.enabled}
+														style={{ minWidth: 118 }}
+														value={dayjs(`2000-01-01T${interval.start}:00`)}
+														onChange={(_, value) =>
+															updateWorkingInterval(
+																weekday,
+																index,
+																"start",
+																value,
+															)
+														}
+													/>
+													<Typography.Text type="secondary">
+														{tr("to")}
+													</Typography.Text>
+													<TimePicker
+														format="HH:mm"
+														minuteStep={15}
+														disabled={!day.enabled}
+														style={{ minWidth: 118 }}
+														value={dayjs(`2000-01-01T${interval.end}:00`)}
+														onChange={(_, value) =>
+															updateWorkingInterval(
+																weekday,
+																index,
+																"end",
+																value,
+															)
+														}
+													/>
+													<Button
+														danger
+														type="text"
+														icon={<DeleteOutlined />}
+														disabled={!day.enabled}
+														onClick={() =>
+															removeWorkingInterval(weekday, index)
+														}
+													/>
+												</Flex>
+											))}
+
+											{day.intervals.length === 0 && (
+												<Typography.Text type="secondary">
+													{tr("No time intervals configured.")}
+												</Typography.Text>
+											)}
+
+											<Button
+												type="dashed"
+												icon={<PlusOutlined />}
+												disabled={!day.enabled}
+												onClick={() => addWorkingInterval(weekday)}
+											>
+												{tr("Add Interval")}
+											</Button>
+										</Flex>
+									</div>
+								);
+							})}
 						</div>
-					</Flex>
-				</Section>
+					</Section>
 
-				<Section
-					title={tr("Booking Rules")}
-					description={tr(
-						"Define how visitors may select services and whether the calendar allows overlapping or admin-only bookings.",
-					)}
-				>
-					<Flex vertical gap={18}>
-						<div>
-							<Typography.Text
-								strong
-								style={{ display: "block", marginBottom: 8 }}
-							>
-								{tr("Service Selection")}
-							</Typography.Text>
-							<Segmented
-								options={[
-									{ label: tr("Single Select"), value: "single" },
-									{ label: tr("Multi Select"), value: "multi" },
-								]}
-								value={settings.selectionMode}
-								onChange={(value) =>
-									onChange({
-										...settings,
-										selectionMode: value as CalendarSettings["selectionMode"],
-									})
-								}
-							/>
-						</div>
-
-						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
-							<div style={{ maxWidth: 460 }}>
-								<Typography.Text strong style={{ display: "block" }}>
-									{tr("Allow Double Bookings")}
-								</Typography.Text>
-								<Typography.Text type="secondary">
-									{tr(
-										"If enabled, overlapping bookings may exist in the same calendar.",
-									)}
-								</Typography.Text>
-							</div>
-							<Switch
-								checked={settings.allowDoubleBookings}
-								onChange={(checked) =>
-									onChange({
-										...settings,
-										allowDoubleBookings: checked,
-									})
-								}
-							/>
-						</Flex>
-
-						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
-							<div style={{ maxWidth: 460 }}>
-								<Typography.Text strong style={{ display: "block" }}>
-									{tr("Admin Only Bookings")}
-								</Typography.Text>
-								<Typography.Text type="secondary">
-									{tr("Reserve this calendar for admin-managed bookings only.")}
-								</Typography.Text>
-							</div>
-							<Switch
-								checked={settings.adminOnly}
-								onChange={(checked) =>
-									onChange({
-										...settings,
-										adminOnly: checked,
-									})
-								}
-							/>
-						</Flex>
-					</Flex>
-				</Section>
-
-				<Section
-					title={tr("Default Slot Timing")}
-					description={tr(
-						"Define the base slot footprint and how far ahead customers are allowed to book.",
-					)}
-				>
-					<Flex vertical gap={16}>
-						<Flex gap={12} wrap="wrap">
-							<InputNumber
-								min={1}
-								value={settings.slotSettings.sessionDuration}
-								addonBefore={tr("Session")}
-								addonAfter="min"
-								onChange={(value) =>
-									updateSlotSettings({
-										sessionDuration: Number(value ?? 60),
-									})
-								}
-							/>
-							<InputNumber
-								min={0}
-								value={settings.slotSettings.prepTime}
-								addonBefore={tr("Prep")}
-								addonAfter="min"
-								onChange={(value) =>
-									updateSlotSettings({
-										prepTime: Number(value ?? 0),
-									})
-								}
-							/>
-							<InputNumber
-								min={0}
-								value={settings.slotSettings.cleanupTime}
-								addonBefore={tr("Cleanup")}
-								addonAfter="min"
-								onChange={(value) =>
-									updateSlotSettings({
-										cleanupTime: Number(value ?? 0),
-									})
-								}
-							/>
-							<InputNumber
-								min={0}
-								value={settings.slotSettings.maxAdvanceDays}
-								addonBefore={tr("Book ahead")}
-								addonAfter="days"
-								onChange={(value) =>
-									updateSlotSettings({
-										maxAdvanceDays: Number(value ?? 0),
-									})
-								}
-							/>
-						</Flex>
-						<Alert
-							type="info"
-							showIcon
-							message={`${tr("Total slot footprint")}: ${totalDefaultSlotDuration} ${tr("minutes")}`}
-							description={
-								settings.slotSettings.maxAdvanceDays > 0
-									? getBookAheadDescription(
-											settings.slotSettings.maxAdvanceDays,
-										)
-									: tr(
-											"Set “Book ahead” to 0 to allow booking without an advance-day limit.",
-										)
-							}
-						/>
-					</Flex>
-				</Section>
-
-				<Section
-					title={tr("Working Hours")}
-					description={tr(
-						"Configure availability per weekday. Multiple intervals per day allow lunch breaks and split shifts.",
-					)}
-				>
 					<div
 						style={{
 							display: "grid",
@@ -822,376 +1139,201 @@ export function CalendarSettingsPanel({
 								? "repeat(2, minmax(0, 1fr))"
 								: "minmax(0, 1fr)",
 							gap: 16,
+							alignItems: "start",
 						}}
 					>
-						{WEEKDAY_ORDER.map((weekday) => {
-							const day = settings.workingHours[weekday];
-
-							return (
-								<div
-									key={weekday}
-									style={{
-										border: `1px solid ${token.colorBorderSecondary}`,
-										borderRadius: token.borderRadius,
-										padding: 16,
-									}}
-								>
-									<Flex
-										align="center"
-										justify="space-between"
-										wrap="wrap"
-										gap={12}
-										style={{ marginBottom: 12 }}
+						<Section
+							title={tr("Services")}
+							description={tr(
+								"Add the services available for this calendar, including duration and optional prep / cleanup times.",
+							)}
+						>
+							<Flex vertical gap={14}>
+								{settings.services.map((service, index) => (
+									<div
+										key={service.id}
+										style={{
+											border: `1px solid ${token.colorBorderSecondary}`,
+											borderRadius: token.borderRadius,
+											padding: 16,
+										}}
 									>
-										<Typography.Text strong>
-											{weekdayLabels[weekday]}
-										</Typography.Text>
-										<Switch
-											checked={day.enabled}
-											checkedChildren={availabilitySwitchLabels.on}
-											unCheckedChildren={availabilitySwitchLabels.off}
-											onChange={(enabled) =>
-												setWorkingDay(weekday, {
-													...day,
-													enabled,
-												})
-											}
-										/>
-									</Flex>
-
-									<Flex vertical gap={10}>
-										{day.intervals.map((interval, index) => (
-											<Flex
-												key={`${weekday}-${interval.start}-${interval.end}`}
-												align="center"
-												gap={10}
-												wrap="wrap"
-											>
-												<TimePicker
-													format="HH:mm"
-													minuteStep={15}
-													disabled={!day.enabled}
-													style={{ minWidth: 118 }}
-													value={dayjs(`2000-01-01T${interval.start}:00`)}
-													onChange={(_, value) =>
-														updateWorkingInterval(
-															weekday,
-															index,
-															"start",
-															value,
-														)
-													}
-												/>
-												<Typography.Text type="secondary">
-													{tr("to")}
-												</Typography.Text>
-												<TimePicker
-													format="HH:mm"
-													minuteStep={15}
-													disabled={!day.enabled}
-													style={{ minWidth: 118 }}
-													value={dayjs(`2000-01-01T${interval.end}:00`)}
-													onChange={(_, value) =>
-														updateWorkingInterval(weekday, index, "end", value)
-													}
+										<Flex
+											justify="space-between"
+											align="center"
+											gap={12}
+											style={{ marginBottom: 16 }}
+										>
+											<Typography.Text strong>
+												{service.publicLabel ||
+													service.name ||
+													`${tr("Service")} ${index + 1}`}
+											</Typography.Text>
+											<Flex gap={4}>
+												<Button
+													type="text"
+													icon={<UpOutlined />}
+													disabled={index === 0}
+													onClick={() => moveService(index, -1)}
 												/>
 												<Button
-													danger
 													type="text"
+													icon={<DownOutlined />}
+													disabled={index === settings.services.length - 1}
+													onClick={() => moveService(index, 1)}
+												/>
+												<Button
+													type="text"
+													danger
 													icon={<DeleteOutlined />}
-													disabled={!day.enabled}
-													onClick={() => removeWorkingInterval(weekday, index)}
+													onClick={() => removeService(index)}
 												/>
 											</Flex>
-										))}
+										</Flex>
 
-										{day.intervals.length === 0 && (
-											<Typography.Text type="secondary">
-												{tr("No time intervals configured.")}
-											</Typography.Text>
-										)}
+										<Flex vertical gap={12}>
+											<Input
+												placeholder={tr("Internal service name")}
+												value={service.name}
+												onChange={(event) =>
+													updateService(index, { name: event.target.value })
+												}
+											/>
+											<Input
+												placeholder={tr("Public service title")}
+												value={service.publicLabel}
+												onChange={(event) =>
+													updateService(index, {
+														publicLabel: event.target.value,
+													})
+												}
+											/>
+											<Flex gap={12} wrap="wrap">
+												<InputNumber
+													min={1}
+													value={service.duration}
+													addonBefore={tr("Duration")}
+													addonAfter="min"
+													onChange={(value) =>
+														updateService(index, {
+															duration: Number(value ?? 30),
+														})
+													}
+												/>
+												<InputNumber
+													min={0}
+													value={service.prepTime}
+													addonBefore={tr("Prep")}
+													addonAfter="min"
+													onChange={(value) =>
+														updateService(index, {
+															prepTime: Number(value ?? 0),
+														})
+													}
+												/>
+												<InputNumber
+													min={0}
+													value={service.cleanupTime}
+													addonBefore={tr("Cleanup")}
+													addonAfter="min"
+													onChange={(value) =>
+														updateService(index, {
+															cleanupTime: Number(value ?? 0),
+														})
+													}
+												/>
+											</Flex>
+											<Input
+												placeholder={tr("Price, e.g. 59 EUR")}
+												value={service.price}
+												onChange={(event) =>
+													updateService(index, { price: event.target.value })
+												}
+											/>
+											<TextArea
+												rows={3}
+												placeholder={tr("Short description")}
+												value={service.description}
+												onChange={(event) =>
+													updateService(index, {
+														description: event.target.value,
+													})
+												}
+											/>
+										</Flex>
+									</div>
+								))}
 
-										<Button
-											type="dashed"
-											icon={<PlusOutlined />}
-											disabled={!day.enabled}
-											onClick={() => addWorkingInterval(weekday)}
-										>
-											{tr("Add Interval")}
-										</Button>
-									</Flex>
-								</div>
-							);
-						})}
-					</div>
-				</Section>
-
-				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: screens.lg
-							? "repeat(2, minmax(0, 1fr))"
-							: "minmax(0, 1fr)",
-						gap: 16,
-						alignItems: "start",
-					}}
-				>
-					<Section
-						title={tr("Services")}
-						description={tr(
-							"Add the services available for this calendar, including duration and optional prep / cleanup times.",
-						)}
-					>
-						<Flex vertical gap={14}>
-							{settings.services.map((service, index) => (
-								<div
-									key={service.id}
-									style={{
-										border: `1px solid ${token.colorBorderSecondary}`,
-										borderRadius: token.borderRadius,
-										padding: 16,
-									}}
+								<Button
+									type="dashed"
+									icon={<PlusOutlined />}
+									onClick={addService}
 								>
+									{tr("Add Service")}
+								</Button>
+							</Flex>
+						</Section>
+
+						<Section
+							title={tr("Blocked Dates")}
+							description={tr(
+								"Add holidays or exception days that should be unavailable despite normal working hours.",
+							)}
+						>
+							<Flex vertical gap={12}>
+								{settings.exceptions.map((exception, index) => (
 									<Flex
-										justify="space-between"
+										key={exception.id}
 										align="center"
-										gap={12}
-										style={{ marginBottom: 16 }}
+										gap={10}
+										wrap="wrap"
+										style={{
+											border: `1px solid ${token.colorBorderSecondary}`,
+											borderRadius: token.borderRadius,
+											padding: 14,
+										}}
 									>
-										<Typography.Text strong>
-											{service.publicLabel ||
-												service.name ||
-												`${tr("Service")} ${index + 1}`}
-										</Typography.Text>
-										<Flex gap={4}>
-											<Button
-												type="text"
-												icon={<UpOutlined />}
-												disabled={index === 0}
-												onClick={() => moveService(index, -1)}
-											/>
-											<Button
-												type="text"
-												icon={<DownOutlined />}
-												disabled={index === settings.services.length - 1}
-												onClick={() => moveService(index, 1)}
-											/>
-											<Button
-												type="text"
-												danger
-												icon={<DeleteOutlined />}
-												onClick={() => removeService(index)}
-											/>
-										</Flex>
-									</Flex>
-
-									<Flex vertical gap={12}>
-										<Input
-											placeholder={tr("Internal service name")}
-											value={service.name}
-											onChange={(event) =>
-												updateService(index, { name: event.target.value })
+										<DatePicker
+											format="YYYY-MM-DD"
+											style={{ minWidth: 148 }}
+											value={exception.date ? dayjs(exception.date) : null}
+											onChange={(_, value) =>
+												updateException(index, { date: value })
 											}
 										/>
 										<Input
-											placeholder={tr("Public service title")}
-											value={service.publicLabel}
+											placeholder={tr("Reason")}
+											value={exception.reason}
+											style={{ minWidth: 240, flex: 1 }}
 											onChange={(event) =>
-												updateService(index, {
-													publicLabel: event.target.value,
-												})
+												updateException(index, { reason: event.target.value })
 											}
 										/>
-										<Flex gap={12} wrap="wrap">
-											<InputNumber
-												min={1}
-												value={service.duration}
-												addonBefore={tr("Duration")}
-												addonAfter="min"
-												onChange={(value) =>
-													updateService(index, {
-														duration: Number(value ?? 30),
-													})
-												}
-											/>
-											<InputNumber
-												min={0}
-												value={service.prepTime}
-												addonBefore={tr("Prep")}
-												addonAfter="min"
-												onChange={(value) =>
-													updateService(index, { prepTime: Number(value ?? 0) })
-												}
-											/>
-											<InputNumber
-												min={0}
-												value={service.cleanupTime}
-												addonBefore={tr("Cleanup")}
-												addonAfter="min"
-												onChange={(value) =>
-													updateService(index, {
-														cleanupTime: Number(value ?? 0),
-													})
-												}
-											/>
-										</Flex>
-										<Input
-											placeholder={tr("Price, e.g. 59 EUR")}
-											value={service.price}
-											onChange={(event) =>
-												updateService(index, { price: event.target.value })
-											}
-										/>
-										<TextArea
-											rows={3}
-											placeholder={tr("Short description")}
-											value={service.description}
-											onChange={(event) =>
-												updateService(index, {
-													description: event.target.value,
-												})
-											}
+										<Button
+											danger
+											type="text"
+											icon={<DeleteOutlined />}
+											onClick={() => removeException(index)}
 										/>
 									</Flex>
-								</div>
-							))}
+								))}
 
-							<Button
-								type="dashed"
-								icon={<PlusOutlined />}
-								onClick={addService}
-							>
-								{tr("Add Service")}
-							</Button>
-						</Flex>
-					</Section>
-
-					<Section
-						title={tr("Blocked Dates")}
-						description={tr(
-							"Add holidays or exception days that should be unavailable despite normal working hours.",
-						)}
-					>
-						<Flex vertical gap={12}>
-							{settings.exceptions.map((exception, index) => (
-								<Flex
-									key={exception.id}
-									align="center"
-									gap={10}
-									wrap="wrap"
-									style={{
-										border: `1px solid ${token.colorBorderSecondary}`,
-										borderRadius: token.borderRadius,
-										padding: 14,
-									}}
+								<Button
+									type="dashed"
+									icon={<PlusOutlined />}
+									onClick={addException}
 								>
-									<DatePicker
-										format="YYYY-MM-DD"
-										style={{ minWidth: 148 }}
-										value={exception.date ? dayjs(exception.date) : null}
-										onChange={(_, value) =>
-											updateException(index, { date: value })
-										}
-									/>
-									<Input
-										placeholder={tr("Reason")}
-										value={exception.reason}
-										style={{ minWidth: 240, flex: 1 }}
-										onChange={(event) =>
-											updateException(index, { reason: event.target.value })
-										}
-									/>
-									<Button
-										danger
-										type="text"
-										icon={<DeleteOutlined />}
-										onClick={() => removeException(index)}
-									/>
-								</Flex>
-							))}
+									{tr("Add Blocked Date")}
+								</Button>
+							</Flex>
+						</Section>
+					</div>
 
-							<Button
-								type="dashed"
-								icon={<PlusOutlined />}
-								onClick={addException}
-							>
-								{tr("Add Blocked Date")}
-							</Button>
-						</Flex>
-					</Section>
-				</div>
-
-				<Section
-					title={tr("Mail Service")}
-					description={tr(
-						"Booking confirmation emails are delivered via wp_mail(), using whatever SMTP plugin or mail configuration is active on your WordPress site.",
-					)}
-				>
-					<Flex vertical gap={16}>
-						<Flex align="center" justify="space-between" gap={16} wrap="wrap">
-							<div style={{ maxWidth: 520 }}>
-								<Typography.Text strong style={{ display: "block" }}>
-									{tr("Enable Email Notifications")}
-								</Typography.Text>
-								<Typography.Text type="secondary">
-									{tr(
-										"Send a booking confirmation email to the customer after each successful booking.",
-									)}
-								</Typography.Text>
-							</div>
-							<Switch
-								checked={settings.mailSettings.enabled}
-								onChange={(checked) => updateMailSettings({ enabled: checked })}
-							/>
-						</Flex>
-
-						<Flex gap={12} wrap="wrap">
-							<Input
-								placeholder={tr("From name")}
-								value={settings.mailSettings.fromName}
-								style={{ minWidth: 220, flex: 1 }}
-								onChange={(event) =>
-									updateMailSettings({ fromName: event.target.value })
-								}
-							/>
-							<Input
-								placeholder={tr("From email")}
-								value={settings.mailSettings.fromEmail}
-								style={{ minWidth: 220, flex: 1 }}
-								onChange={(event) =>
-									updateMailSettings({ fromEmail: event.target.value })
-								}
-							/>
-						</Flex>
-
-						<Input
-							placeholder={tr("Confirmation email subject")}
-							value={settings.mailSettings.subject}
-							onChange={(event) =>
-								updateMailSettings({ subject: event.target.value })
-							}
-						/>
-
-						<Flex gap={8} align="center" wrap="wrap">
-							<Input
-								type="email"
-								placeholder={tr("Recipient address for test email")}
-								value={testMailTo}
-								onChange={(e) => setTestMailTo(e.target.value)}
-								style={{ flex: 1, minWidth: 220 }}
-							/>
-							<Button
-								onClick={() => void handleSendTestMail()}
-								loading={testMailLoading}
-							>
-								{tr("Send Test Email")}
-							</Button>
-						</Flex>
-					</Flex>
-				</Section>
-			</Flex>
+				</Flex>
 			</div>
 			{messageContextHolder}
+				</>
+			)}
 		</>
 	);
 }

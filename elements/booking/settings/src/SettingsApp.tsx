@@ -30,6 +30,7 @@ import {
 } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BookingView, type ViewOption } from "./BookingView";
@@ -71,6 +72,7 @@ interface HBricksWindow {
 		restUrl?: string;
 		restNonce?: string;
 		locale?: string;
+		siteName?: string;
 	};
 	__hBricksNewBooking?: () => void;
 }
@@ -749,7 +751,12 @@ function Sidebar({
 					</div>
 				)}
 
-				<div style={{ padding: collapsed ? "0 8px 8px" : "0 12px 8px", marginTop: "auto" }}>
+				<div
+					style={{
+						padding: collapsed ? "0 8px 8px" : "0 12px 8px",
+						marginTop: "auto",
+					}}
+				>
 					<Tooltip
 						title={collapsed ? tr("New Calendar") : ""}
 						placement="right"
@@ -773,7 +780,6 @@ function Sidebar({
 						<Divider style={{ margin: 0 }} />
 						<div
 							style={{
-		
 								padding: 0,
 								display: "flex",
 								flexDirection: "column",
@@ -929,9 +935,6 @@ function App() {
 	}, []);
 
 	useEffect(() => {
-		applyWordPressScreenMetaButtonFix();
-		applyWordPressLayoutHeightFix();
-
 		const observer = new MutationObserver(() => {
 			applyWordPressScreenMetaButtonFix();
 			applyWordPressLayoutHeightFix();
@@ -1075,9 +1078,15 @@ function App() {
 	}, [createCalendarPending, newCalendarTitle]);
 
 	const handleSettingsChange = useCallback((nextSettings: CalendarSettings) => {
-		setCalendarSettings(nextSettings);
-		setSettingsDirty(true);
-		setSettingsError("");
+		setCalendarSettings((currentSettings) => {
+			const hasChanged =
+				JSON.stringify(currentSettings) !== JSON.stringify(nextSettings);
+			if (hasChanged) {
+				setSettingsDirty(true);
+				setSettingsError("");
+			}
+			return nextSettings;
+		});
 	}, []);
 
 	const handleCalendarTitleChange = useCallback((nextTitle: string) => {
@@ -1172,7 +1181,6 @@ function App() {
 
 		setDeleteModalOpen(false);
 	}, [deletingCalendar]);
-
 
 	const isSettingsModalOpen = createModalOpen || deleteModalOpen;
 
@@ -1284,12 +1292,20 @@ function App() {
 		<>
 			<div
 				className="hbe-settings-shell"
-				style={{
-					display: "flex",
-					height: "100%",
-					overflow: "hidden",
-					alignItems: "stretch",
-				}}
+				style={
+					{
+						"--hbe-settings-input-bg": token.colorBgContainer,
+						"--hbe-settings-input-border": token.colorBorder,
+						"--hbe-settings-input-border-hover":
+							token.colorPrimaryBorderHover ?? token.colorPrimary,
+						"--hbe-settings-input-text": token.colorText,
+						"--hbe-settings-input-placeholder": token.colorTextPlaceholder,
+						display: "flex",
+						height: "100%",
+						overflow: "hidden",
+						alignItems: "stretch",
+					} as CSSProperties
+				}
 			>
 				<Sidebar
 					collapsed={collapsed}
@@ -1318,8 +1334,6 @@ function App() {
 					<div
 						className="hbe-settings-toolbar"
 						style={{
-							background: "var(--hbe-chrome-bg)",
-							borderBottom: "1px solid var(--hbe-chrome-border)",
 							padding: "0 16px",
 							height: 64,
 						}}
@@ -1337,20 +1351,14 @@ function App() {
 							>
 								<Tooltip
 									title={
-										collapsed
-											? tr("Expand sidebar")
-											: tr("Collapse sidebar")
+										collapsed ? tr("Expand sidebar") : tr("Collapse sidebar")
 									}
 								>
 									<Button
 										type="default"
 										size="large"
 										icon={
-											collapsed ? (
-												<MenuUnfoldOutlined />
-											) : (
-												<MenuFoldOutlined />
-											)
+											collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
 										}
 										style={{
 											flexShrink: 0,
@@ -1358,9 +1366,7 @@ function App() {
 											background: "var(--hbe-chrome-surface)",
 										}}
 										onClick={() =>
-											setCollapsedManual(
-												(current) => !(current ?? isSmall),
-											)
+											setCollapsedManual((current) => !(current ?? isSmall))
 										}
 									/>
 								</Tooltip>
@@ -1571,6 +1577,7 @@ function App() {
 										tr("Calendar")
 									}
 									settings={calendarSettings}
+									settingsDirty={settingsDirty}
 									loading={settingsLoading}
 									error={settingsError}
 									restUrl={getAdminApiConfig().restUrl}
@@ -1593,26 +1600,26 @@ function App() {
 				</div>
 			</div>
 
-		{isSettingsModalOpen && (
-			<div
-				aria-hidden="true"
-				onClick={handleCloseSettingsModal}
-				style={{
-					position: "fixed",
-					inset: 0,
-					background: "rgba(0, 0, 0, 0.45)",
-					zIndex: ADMIN_MODAL_Z_INDEX - 1,
-				}}
-			/>
-		)}
+			{isSettingsModalOpen && (
+				<div
+					aria-hidden="true"
+					onClick={handleCloseSettingsModal}
+					style={{
+						position: "fixed",
+						inset: 0,
+						background: "rgba(0, 0, 0, 0.45)",
+						zIndex: ADMIN_MODAL_Z_INDEX - 1,
+					}}
+				/>
+			)}
 
-		<Modal
-			title={tr("Create Calendar")}
-			getContainer={getAdminModalContainer}
-			destroyOnHidden
-			mask={false}
-			open={createModalOpen}
-			zIndex={ADMIN_MODAL_Z_INDEX}
+			<Modal
+				title={tr("Create Calendar")}
+				getContainer={getAdminModalContainer}
+				destroyOnHidden
+				mask={false}
+				open={createModalOpen}
+				zIndex={ADMIN_MODAL_Z_INDEX}
 				okText={tr("Create")}
 				okButtonProps={{
 					disabled: newCalendarTitle.trim().length === 0,

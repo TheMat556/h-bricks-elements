@@ -190,7 +190,7 @@ class Booking extends \Bricks\Element {
 			'group'    => 'bookingLabels',
 			'label'    => esc_html__( 'Info title', 'h-bricks-elements' ),
 			'type'     => 'text',
-			'default'  => esc_html__( 'Booking information', 'h-bricks-elements' ),
+			'placeholder' => esc_html__( 'Booking information', 'h-bricks-elements' ),
 			'required' => array(
 				'firstColumnMode',
 				'=',
@@ -203,7 +203,7 @@ class Booking extends \Bricks\Element {
 			'group'    => 'bookingLabels',
 			'label'    => esc_html__( 'Info text', 'h-bricks-elements' ),
 			'type'     => 'textarea',
-			'default'  => esc_html__( 'Use this column for a short intro, opening notes, or any calendar-specific instructions.', 'h-bricks-elements' ),
+			'placeholder' => esc_html__( 'Use this column for a short intro, opening notes, or any calendar-specific instructions.', 'h-bricks-elements' ),
 			'required' => array(
 				'firstColumnMode',
 				'=',
@@ -250,7 +250,7 @@ class Booking extends \Bricks\Element {
 			'group'   => 'bookingLabels',
 			'label'   => esc_html__( 'Success title', 'h-bricks-elements' ),
 			'type'    => 'text',
-			'default' => esc_html__( 'This meeting is scheduled', 'h-bricks-elements' ),
+			'placeholder' => esc_html__( 'This meeting is scheduled', 'h-bricks-elements' ),
 		);
 
 		$this->controls['successText'] = array(
@@ -258,7 +258,7 @@ class Booking extends \Bricks\Element {
 			'group'   => 'bookingLabels',
 			'label'   => esc_html__( 'Success text', 'h-bricks-elements' ),
 			'type'    => 'textarea',
-			'default' => esc_html__( 'Your booking is confirmed. Please keep these details for your records.', 'h-bricks-elements' ),
+			'placeholder' => esc_html__( 'Your booking is confirmed. Please keep these details for your records.', 'h-bricks-elements' ),
 		);
 
 		$this->controls['successButtonLabel'] = array(
@@ -266,7 +266,7 @@ class Booking extends \Bricks\Element {
 			'group'   => 'bookingLabels',
 			'label'   => esc_html__( 'Success button label', 'h-bricks-elements' ),
 			'type'    => 'text',
-			'default' => esc_html__( 'Book another time', 'h-bricks-elements' ),
+			'placeholder' => esc_html__( 'Book another time', 'h-bricks-elements' ),
 		);
 
 		$this->controls['columnGap'] = array(

@@ -9,12 +9,15 @@ export default defineConfig({
 		emptyOutDir: false,
 		rollupOptions: {
 			input: {
-				booking: resolve(__dirname, "elements/booking/src/booking.ts"),
-				cancel: resolve(__dirname, "elements/booking/cancel/cancel.tsx"),
+				"email-designer": resolve(
+					__dirname,
+					"elements/booking/email-designer/email-designer.tsx",
+				),
 			},
 			output: {
 				entryFileNames: "[name].js",
 				assetFileNames: "[name][extname]",
+				format: "iife",
 			},
 		},
 	},

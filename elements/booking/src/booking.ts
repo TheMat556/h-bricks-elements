@@ -208,6 +208,11 @@ const shortWeekdayDateFormatter = new Intl.DateTimeFormat(undefined, {
 
 const calendarWeekdayLabels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
+const legacyInfoTitleDefaults = new Set(["Booking information"]);
+const legacyInfoTextDefaults = new Set([
+	"Use this column for a short intro, opening notes, or any calendar-specific instructions.",
+]);
+
 function bootBookingElements() {
 	document
 		.querySelectorAll<HTMLElement>("[data-hbe-booking]")
@@ -217,6 +222,15 @@ function bootBookingElements() {
 }
 
 function createInitialBookingState(root: HTMLElement): BookingState {
+	const infoTitle = normalizeLegacyTemplateOverride(
+		root.dataset.infoTitle ?? "",
+		legacyInfoTitleDefaults,
+	);
+	const infoText = normalizeLegacyTemplateOverride(
+		root.dataset.infoText ?? "",
+		legacyInfoTextDefaults,
+	);
+
 	return {
 		root,
 		firstColumnEl: root.querySelector<HTMLElement>(
@@ -243,8 +257,8 @@ function createInitialBookingState(root: HTMLElement): BookingState {
 		showSlots: root.dataset.showSlots !== "false",
 		showStepperProgress: root.dataset.showStepperProgress !== "false",
 		stepperAutoAdvance: root.dataset.stepperAutoAdvance !== "false",
-		infoTitle: root.dataset.infoTitle ?? "",
-		infoText: root.dataset.infoText ?? "",
+		infoTitle,
+		infoText,
 		firstColumnLabel: root.dataset.firstColumnLabel ?? "",
 		successTitle: root.dataset.successTitle ?? "",
 		successText: root.dataset.successText ?? "",
@@ -279,6 +293,18 @@ function createInitialBookingState(root: HTMLElement): BookingState {
 		timeFormat: "12h",
 		calendarInstance: null,
 	};
+}
+
+function normalizeLegacyTemplateOverride(
+	value: string,
+	legacyDefaults: Set<string>,
+): string {
+	const normalized = value.trim();
+	if (!normalized) {
+		return "";
+	}
+
+	return legacyDefaults.has(normalized) ? "" : normalized;
 }
 
 async function initBookingElement(root: HTMLElement) {

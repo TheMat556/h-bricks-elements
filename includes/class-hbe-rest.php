@@ -270,6 +270,62 @@ class HBE_REST {
 				),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/admin/email-template',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'get_email_template' ),
+					'permission_callback' => array( __CLASS__, 'can_manage_admin' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( __CLASS__, 'update_email_template' ),
+					'permission_callback' => array( __CLASS__, 'can_manage_admin' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Returns the global email template.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function get_email_template(): WP_REST_Response {
+		$stored = get_option( 'hbe_email_template', array() );
+		$template = is_array( $stored ) && ! empty( $stored )
+			? $stored
+			: HBE_Calendar_Settings::get_defaults()['mailSettings']['template'];
+
+		return new WP_REST_Response( array( 'template' => $template ) );
+	}
+
+	/**
+	 * Saves the global email template.
+	 *
+	 * @param WP_REST_Request $request Incoming request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_email_template( WP_REST_Request $request ) {
+		$payload        = $request->get_json_params();
+		$template_input = isset( $payload['template'] ) && is_array( $payload['template'] )
+			? $payload['template']
+			: array();
+
+		if ( ! empty( $template_input['compiledHtml'] ) ) {
+			$validation = HBE_Booking_Mail::validate_template_payload( $template_input );
+			if ( is_wp_error( $validation ) ) {
+				return $validation;
+			}
+		}
+
+		$sanitized = HBE_Calendar_Settings::sanitize_email_template( $template_input );
+		update_option( 'hbe_email_template', $sanitized, false );
+
+		return new WP_REST_Response( array( 'template' => $sanitized ) );
 	}
 
 	/**
@@ -382,10 +438,15 @@ class HBE_REST {
 			$calendar = get_post( (int) $calendar->ID );
 		}
 
+		$updated_settings = HBE_Calendar_Settings::update( (int) $calendar->ID, $settings );
+		if ( is_wp_error( $updated_settings ) ) {
+			return $updated_settings;
+		}
+
 		return new WP_REST_Response(
 			array(
 				'item'     => self::format_calendar_item( $calendar ),
-				'settings' => HBE_Calendar_Settings::update( (int) $calendar->ID, $settings ),
+				'settings' => $updated_settings,
 			)
 		);
 	}
@@ -480,6 +541,8 @@ class HBE_REST {
 		if ( is_wp_error( $booking ) ) {
 			return $booking;
 		}
+
+		HBE_Plugin::send_booking_confirmation( (int) $calendar->ID, $booking );
 
 		return new WP_REST_Response(
 			array(
@@ -736,27 +799,28 @@ class HBE_REST {
 			);
 		}
 
-		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
-		$mail     = $settings['mailSettings'] ?? array();
-		$headers  = array( 'Content-Type: text/plain; charset=UTF-8' );
-
-		if ( ! empty( $mail['fromEmail'] ) && is_email( $mail['fromEmail'] ) ) {
-			$from_name = ! empty( $mail['fromName'] ) ? $mail['fromName'] : $mail['fromEmail'];
-			$headers[] = 'From: ' . $from_name . ' <' . $mail['fromEmail'] . '>';
-		}
-
-		$sent = wp_mail(
-			$to,
-			'H-Bricks Mail Test',
-			"This is a test email sent from the H-Bricks booking plugin.\n\nIf you received this, your WordPress mail configuration is working correctly.",
-			$headers
+		$booking = HBE_Booking_Mail::build_test_booking_payload( (int) $calendar->ID, $to );
+		$sent    = HBE_Booking_Mail::send_booking_email(
+			(int) $calendar->ID,
+			$booking,
+			array(
+				'is_test'       => true,
+				'to'            => $to,
+				'force_enabled' => true,
+			)
 		);
 
-		if ( ! $sent ) {
+		if ( is_wp_error( $sent ) ) {
+			$error_data = $sent->get_error_data();
+			if ( ! is_array( $error_data ) ) {
+				$error_data = array();
+			}
+			$status = isset( $error_data['status'] ) ? (int) $error_data['status'] : 400;
+
 			return new WP_Error(
-				'hbe_mail_failed',
-				__( 'Email could not be sent. Check your site mail configuration.', 'h-bricks-elements' ),
-				array( 'status' => 502 )
+				$sent->get_error_code(),
+				$sent->get_error_message(),
+				array_merge( $error_data, array( 'status' => $status ) )
 			);
 		}
 

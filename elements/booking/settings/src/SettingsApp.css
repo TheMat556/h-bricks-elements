@@ -8,14 +8,17 @@
 	--hbe-settings-input-height: 40px;
 	--hbe-settings-input-font-size: 13px;
 
-	/* Chrome colors — mirror the shell's --shell-chrome-* variables */
-	--hbe-chrome-bg: #edf1f5;
-	--hbe-chrome-raised: rgba(255, 255, 255, 0.76);
-	--hbe-chrome-border: rgba(15, 23, 42, 0.09);
-	--hbe-chrome-surface: #ffffff;
+	/* Chrome colors — mirror the shell's --shell-chrome-* variables.
+	   Only apply the local fallback when the shell var is not provided. */
+	--hbe-chrome-bg: var(--shell-chrome-bg, #edf1f5);
+	--hbe-chrome-raised: var(--shell-chrome-raised, rgba(255, 255, 255, 0.76));
+	--hbe-chrome-border: var(--color-border-subtle, rgba(15, 23, 42, 0.09));
+	--hbe-chrome-border-strong: var(--color-border-strong, rgba(15, 23, 42, 0.14));
+	--hbe-chrome-surface: var(--color-bg-surface, #ffffff);
 }
 
-body[data-theme="dark"] .hbe-settings-shell {
+body[data-theme="dark"] .hbe-settings-shell,
+.wp-react-ui-root[data-theme="dark"] .hbe-settings-shell {
 	--hbe-settings-input-bg: #1f1f1f;
 	--hbe-settings-input-border: rgba(255, 255, 255, 0.12);
 	--hbe-settings-input-border-hover: rgba(64, 150, 255, 0.55);
@@ -23,15 +26,19 @@ body[data-theme="dark"] .hbe-settings-shell {
 	--hbe-settings-input-placeholder: rgba(255, 255, 255, 0.38);
 
 	/* Chrome colors — dark equivalents of shell's --shell-chrome-* */
-	--hbe-chrome-bg: #172132;
-	--hbe-chrome-raised: rgba(19, 28, 43, 0.88);
-	--hbe-chrome-border: rgba(255, 255, 255, 0.12);
-	--hbe-chrome-surface: #131c2b;
+	--hbe-chrome-bg: var(--shell-chrome-bg, #172132);
+	--hbe-chrome-raised: var(--shell-chrome-raised, rgba(19, 28, 43, 0.88));
+	--hbe-chrome-border: var(--color-border-subtle, rgba(255, 255, 255, 0.12));
+	--hbe-chrome-border-strong: var(--color-border-strong, rgba(255, 255, 255, 0.2));
+	--hbe-chrome-surface: var(--color-bg-surface, #131c2b);
 }
 
 .hbe-settings-toolbar {
 	backdrop-filter: none;
 	box-shadow: none;
+	background: var(--hbe-chrome-bg) !important;
+	border-bottom: 1px solid var(--hbe-chrome-border) !important;
+	transition: background 300ms ease;
 }
 
 .hbe-settings-shell {
@@ -182,8 +189,8 @@ body[data-theme="dark"] .hbe-settings-shell {
 	border-color: var(--hbe-settings-input-border) !important;
 	background: color-mix(
 		in srgb,
-		var(--hbe-settings-input-bg) 92%,
-		black 8%
+		var(--hbe-settings-input-bg) 94%,
+		var(--hbe-settings-input-text) 6%
 	) !important;
 	color: var(--hbe-settings-input-text) !important;
 	min-height: var(--hbe-settings-input-height) !important;
@@ -315,10 +322,6 @@ body[data-theme="dark"] .hbe-settings-shell {
 
 .hbe-settings-sidebar-calendar .ant-picker-calendar-mode-switch {
 	display: none !important;
-}
-
-body[data-theme="dark"] .hbe-settings-shell .ant-input-number-group-addon {
-	background: #262626 !important;
 }
 
 #screen-meta-links .show-settings {

@@ -19,6 +19,7 @@ define( 'HBE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'HBE_VERSION', '0.0.0' );
 
 require_once HBE_PLUGIN_DIR . 'includes/class-hbe-calendar-post-type.php';
+require_once HBE_PLUGIN_DIR . 'includes/class-hbe-booking-mail.php';
 require_once HBE_PLUGIN_DIR . 'includes/class-hbe-calendar-settings.php';
 require_once HBE_PLUGIN_DIR . 'includes/class-hbe-bookings-table.php';
 require_once HBE_PLUGIN_DIR . 'includes/class-hbe-bookings.php';
