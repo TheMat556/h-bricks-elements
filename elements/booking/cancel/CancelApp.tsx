@@ -1,5 +1,4 @@
 import { Button, Card, ConfigProvider, Flex, Result, theme, Typography } from "antd";
-import React from "react";
 import { createRoot } from "react-dom/client";
 
 interface CancelData {
@@ -72,6 +71,7 @@ function CancelApp({ data }: { data: CancelData }) {
 							<form method="post" action={data.action} style={{ display: "inline" }}>
 								<input type="hidden" name="hbe_confirm_cancel" value="1" />
 								{/* eslint-disable-next-line react/no-danger */}
+								{/* biome-ignore lint/security/noDangerouslySetInnerHtml: WordPress nonce field is server-generated */}
 								<div dangerouslySetInnerHTML={{ __html: data.nonceField }} />
 								<Button type="primary" danger htmlType="submit" size="large">
 									Yes, cancel my booking
