@@ -186,12 +186,12 @@ class Booking extends \Bricks\Element {
 		);
 
 		$this->controls['infoTitle'] = array(
-			'tab'      => 'content',
-			'group'    => 'bookingLabels',
-			'label'    => esc_html__( 'Info title', 'h-bricks-elements' ),
-			'type'     => 'text',
+			'tab'         => 'content',
+			'group'       => 'bookingLabels',
+			'label'       => esc_html__( 'Info title', 'h-bricks-elements' ),
+			'type'        => 'text',
 			'placeholder' => esc_html__( 'Booking information', 'h-bricks-elements' ),
-			'required' => array(
+			'required'    => array(
 				'firstColumnMode',
 				'=',
 				'info',
@@ -199,12 +199,12 @@ class Booking extends \Bricks\Element {
 		);
 
 		$this->controls['infoText'] = array(
-			'tab'      => 'content',
-			'group'    => 'bookingLabels',
-			'label'    => esc_html__( 'Info text', 'h-bricks-elements' ),
-			'type'     => 'textarea',
+			'tab'         => 'content',
+			'group'       => 'bookingLabels',
+			'label'       => esc_html__( 'Info text', 'h-bricks-elements' ),
+			'type'        => 'textarea',
 			'placeholder' => esc_html__( 'Use this column for a short intro, opening notes, or any calendar-specific instructions.', 'h-bricks-elements' ),
-			'required' => array(
+			'required'    => array(
 				'firstColumnMode',
 				'=',
 				'info',
@@ -246,26 +246,26 @@ class Booking extends \Bricks\Element {
 		);
 
 		$this->controls['successTitle'] = array(
-			'tab'     => 'content',
-			'group'   => 'bookingLabels',
-			'label'   => esc_html__( 'Success title', 'h-bricks-elements' ),
-			'type'    => 'text',
+			'tab'         => 'content',
+			'group'       => 'bookingLabels',
+			'label'       => esc_html__( 'Success title', 'h-bricks-elements' ),
+			'type'        => 'text',
 			'placeholder' => esc_html__( 'This meeting is scheduled', 'h-bricks-elements' ),
 		);
 
 		$this->controls['successText'] = array(
-			'tab'     => 'content',
-			'group'   => 'bookingLabels',
-			'label'   => esc_html__( 'Success text', 'h-bricks-elements' ),
-			'type'    => 'textarea',
+			'tab'         => 'content',
+			'group'       => 'bookingLabels',
+			'label'       => esc_html__( 'Success text', 'h-bricks-elements' ),
+			'type'        => 'textarea',
 			'placeholder' => esc_html__( 'Your booking is confirmed. Please keep these details for your records.', 'h-bricks-elements' ),
 		);
 
 		$this->controls['successButtonLabel'] = array(
-			'tab'     => 'content',
-			'group'   => 'bookingLabels',
-			'label'   => esc_html__( 'Success button label', 'h-bricks-elements' ),
-			'type'    => 'text',
+			'tab'         => 'content',
+			'group'       => 'bookingLabels',
+			'label'       => esc_html__( 'Success button label', 'h-bricks-elements' ),
+			'type'        => 'text',
 			'placeholder' => esc_html__( 'Book another time', 'h-bricks-elements' ),
 		);
 
@@ -372,14 +372,14 @@ class Booking extends \Bricks\Element {
 		);
 
 		$this->controls['titleSizeEm'] = array(
-			'tab'     => 'style',
-			'group'   => 'bookingContent',
-			'label'   => esc_html__( 'Title size', 'h-bricks-elements' ),
-			'type'    => 'number',
-			'unit'    => 'em',
-			'min'     => 0.5,
-			'step'    => 0.05,
-			'css'     => array(
+			'tab'   => 'style',
+			'group' => 'bookingContent',
+			'label' => esc_html__( 'Title size', 'h-bricks-elements' ),
+			'type'  => 'number',
+			'unit'  => 'em',
+			'min'   => 0.5,
+			'step'  => 0.05,
+			'css'   => array(
 				array(
 					'selector' => '.hbe-booking__title',
 					'property' => 'font-size',
@@ -388,14 +388,14 @@ class Booking extends \Bricks\Element {
 		);
 
 		$this->controls['bodySizeEm'] = array(
-			'tab'     => 'style',
-			'group'   => 'bookingContent',
-			'label'   => esc_html__( 'Body size', 'h-bricks-elements' ),
-			'type'    => 'number',
-			'unit'    => 'em',
-			'min'     => 0.5,
-			'step'    => 0.05,
-			'css'     => array(
+			'tab'   => 'style',
+			'group' => 'bookingContent',
+			'label' => esc_html__( 'Body size', 'h-bricks-elements' ),
+			'type'  => 'number',
+			'unit'  => 'em',
+			'min'   => 0.5,
+			'step'  => 0.05,
+			'css'   => array(
 				array(
 					'selector' => '.hbe-booking__copy, .hbe-booking__service-copy, .hbe-booking__service-meta, .hbe-booking__slot-summary, .hbe-booking__slot-date',
 					'property' => 'font-size',
@@ -460,14 +460,14 @@ class Booking extends \Bricks\Element {
 		);
 
 		$this->controls['calendarCellFontSizeEm'] = array(
-			'tab'     => 'style',
-			'group'   => 'bookingCalendar',
-			'label'   => esc_html__( 'Calendar cell font size', 'h-bricks-elements' ),
-			'type'    => 'number',
-			'unit'    => 'em',
-			'min'     => 0.5,
-			'step'    => 0.05,
-			'css'     => array(
+			'tab'   => 'style',
+			'group' => 'bookingCalendar',
+			'label' => esc_html__( 'Calendar cell font size', 'h-bricks-elements' ),
+			'type'  => 'number',
+			'unit'  => 'em',
+			'min'   => 0.5,
+			'step'  => 0.05,
+			'css'   => array(
 				array(
 					'selector' => '.hbe-booking__calendar-mount .hbe-booking__calendar-day',
 					'property' => 'font-size',
@@ -1117,29 +1117,29 @@ class Booking extends \Bricks\Element {
 	 * @return void
 	 */
 	public function render() {
-		$calendar_options    = $this->get_calendar_options();
-		$default_calendar_id = $this->get_default_calendar_id( $calendar_options );
-		$calendar_id         = isset( $this->settings['calendarId'] ) ? absint( $this->settings['calendarId'] ) : $default_calendar_id;
-		$first_column_mode   = $this->normalize_first_column_mode(
+		$calendar_options      = $this->get_calendar_options();
+		$default_calendar_id   = $this->get_default_calendar_id( $calendar_options );
+		$calendar_id           = isset( $this->settings['calendarId'] ) ? absint( $this->settings['calendarId'] ) : $default_calendar_id;
+		$first_column_mode     = $this->normalize_first_column_mode(
 			isset( $this->settings['firstColumnMode'] ) ? (string) $this->settings['firstColumnMode'] : 'service'
 		);
-		$show_slots          = ! isset( $this->settings['showSlots'] ) || ! empty( $this->settings['showSlots'] );
-		$show_summary        = ! empty( $this->settings['showReservationSummary'] );
-		$layout_mode         = $this->normalize_layout_mode(
+		$show_slots            = ! isset( $this->settings['showSlots'] ) || ! empty( $this->settings['showSlots'] );
+		$show_summary          = ! empty( $this->settings['showReservationSummary'] );
+		$layout_mode           = $this->normalize_layout_mode(
 			isset( $this->settings['layoutMode'] ) ? (string) $this->settings['layoutMode'] : 'inline'
 		);
-		$stepper_auto_advance = ! empty( $this->settings['stepperAutoAdvance'] );
+		$stepper_auto_advance  = ! empty( $this->settings['stepperAutoAdvance'] );
 		$show_stepper_progress = ! isset( $this->settings['showStepperProgress'] ) || ! empty( $this->settings['showStepperProgress'] );
-		$info_title          = isset( $this->settings['infoTitle'] ) ? sanitize_text_field( (string) $this->settings['infoTitle'] ) : '';
-		$info_text           = isset( $this->settings['infoText'] ) ? sanitize_textarea_field( (string) $this->settings['infoText'] ) : '';
-		$first_column_label  = isset( $this->settings['firstColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['firstColumnLabel'] ) : '';
-		$calendar_label      = isset( $this->settings['calendarColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['calendarColumnLabel'] ) : '';
-		$slots_label         = isset( $this->settings['slotsColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['slotsColumnLabel'] ) : '';
-		$success_title       = isset( $this->settings['successTitle'] ) ? sanitize_text_field( (string) $this->settings['successTitle'] ) : '';
-		$success_text        = isset( $this->settings['successText'] ) ? sanitize_textarea_field( (string) $this->settings['successText'] ) : '';
-		$success_button_label = isset( $this->settings['successButtonLabel'] ) ? sanitize_text_field( (string) $this->settings['successButtonLabel'] ) : '';
-		$column_count        = 1;
-		$is_builder_preview  = $this->is_bricks_builder_preview();
+		$info_title            = isset( $this->settings['infoTitle'] ) ? sanitize_text_field( (string) $this->settings['infoTitle'] ) : '';
+		$info_text             = isset( $this->settings['infoText'] ) ? sanitize_textarea_field( (string) $this->settings['infoText'] ) : '';
+		$first_column_label    = isset( $this->settings['firstColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['firstColumnLabel'] ) : '';
+		$calendar_label        = isset( $this->settings['calendarColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['calendarColumnLabel'] ) : '';
+		$slots_label           = isset( $this->settings['slotsColumnLabel'] ) ? sanitize_text_field( (string) $this->settings['slotsColumnLabel'] ) : '';
+		$success_title         = isset( $this->settings['successTitle'] ) ? sanitize_text_field( (string) $this->settings['successTitle'] ) : '';
+		$success_text          = isset( $this->settings['successText'] ) ? sanitize_textarea_field( (string) $this->settings['successText'] ) : '';
+		$success_button_label  = isset( $this->settings['successButtonLabel'] ) ? sanitize_text_field( (string) $this->settings['successButtonLabel'] ) : '';
+		$column_count          = 1;
+		$is_builder_preview    = $this->is_bricks_builder_preview();
 
 		if ( 'off' !== $first_column_mode ) {
 			++$column_count;
@@ -1232,6 +1232,7 @@ class Booking extends \Bricks\Element {
 	/**
 	 * Renders the calendar column.
 	 *
+	 * @param string $calendar_label     The label for the calendar column eyebrow.
 	 * @param bool   $has_calendar       Whether a calendar is configured.
 	 * @param bool   $is_builder_preview Whether the element is rendered inside the Bricks builder.
 	 * @return void
@@ -1263,10 +1264,9 @@ class Booking extends \Bricks\Element {
 			echo '<span class="hbe-booking__status-label">' . esc_html__( 'Next Availability', 'h-bricks-elements' ) . '</span>';
 			echo '<strong class="hbe-booking__status-title">' . esc_html__( 'Thursday, March 5', 'h-bricks-elements' ) . '</strong>';
 			echo '<span class="hbe-booking__status-copy">' . esc_html__( 'Preview card for the helper area below the calendar.', 'h-bricks-elements' ) . '</span>';
-		} else {
-			/* Intentionally empty — JS renders the spinner overlay via [data-loading] and
-			 * populates this element only on error states (e.g. "Calendar unavailable"). */
 		}
+		// Intentionally empty — JS renders the spinner overlay via [data-loading] and
+		// populates this element only on error states (e.g. "Calendar unavailable").
 		echo '</div>';
 		echo '</section>';
 	}
@@ -1274,7 +1274,10 @@ class Booking extends \Bricks\Element {
 	/**
 	 * Renders the slots column.
 	 *
-	 * @param bool $is_builder_preview Whether the element is rendered inside the Bricks builder.
+	 * @param string $slots_label        The label for the slots column eyebrow.
+	 * @param bool   $show_summary       Whether to show the booking summary.
+	 * @param string $first_column_mode  The mode for the first column.
+	 * @param bool   $is_builder_preview Whether the element is rendered inside the Bricks builder.
 	 * @return void
 	 */
 	private function render_slots_column( string $slots_label, bool $show_summary, string $first_column_mode, bool $is_builder_preview ): void {
@@ -1301,41 +1304,146 @@ class Booking extends \Bricks\Element {
 	private function render_calendar_preview_markup(): void {
 		$weekdays = array( 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' );
 		$days     = array(
-			array( 'label' => '24', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
-			array( 'label' => '25', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
-			array( 'label' => '26', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
-			array( 'label' => '27', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
-			array( 'label' => '28', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
-			array( 'label' => '1', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '2', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '3', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '4', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '5', 'class' => 'hbe-booking__calendar-day is-available is-selected' ),
-			array( 'label' => '6', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '7', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '8', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '9', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '10', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '11', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '12', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '13', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '14', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '15', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '16', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '17', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '18', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '19', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '20', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '21', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '22', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '23', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '24', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '25', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '26', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '27', 'class' => 'hbe-booking__calendar-day is-available' ),
-			array( 'label' => '28', 'class' => 'hbe-booking__calendar-day is-disabled' ),
-			array( 'label' => '29', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
-			array( 'label' => '30', 'class' => 'hbe-booking__calendar-day is-outside is-disabled' ),
+			array(
+				'label' => '24',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
+			array(
+				'label' => '25',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
+			array(
+				'label' => '26',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
+			array(
+				'label' => '27',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
+			array(
+				'label' => '28',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
+			array(
+				'label' => '1',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '2',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '3',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '4',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '5',
+				'class' => 'hbe-booking__calendar-day is-available is-selected',
+			),
+			array(
+				'label' => '6',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '7',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '8',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '9',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '10',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '11',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '12',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '13',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '14',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '15',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '16',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '17',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '18',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '19',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '20',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '21',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '22',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '23',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '24',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '25',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '26',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '27',
+				'class' => 'hbe-booking__calendar-day is-available',
+			),
+			array(
+				'label' => '28',
+				'class' => 'hbe-booking__calendar-day is-disabled',
+			),
+			array(
+				'label' => '29',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
+			array(
+				'label' => '30',
+				'class' => 'hbe-booking__calendar-day is-outside is-disabled',
+			),
 		);
 
 		echo '<div class="hbe-booking__calendar-shell">';
@@ -1389,6 +1497,8 @@ class Booking extends \Bricks\Element {
 	/**
 	 * Renders static time slot cells for the builder.
 	 *
+	 * @param bool   $show_summary      Whether to show the booking summary.
+	 * @param string $first_column_mode The mode for the first column.
 	 * @return void
 	 */
 	private function render_slots_preview_markup( bool $show_summary, string $first_column_mode ): void {
