@@ -70,7 +70,7 @@ class HBE_Bookings {
 	/**
 	 * Creates a booking.
 	 *
-	 * @param int                $calendar_id Calendar ID.
+	 * @param int                 $calendar_id Calendar ID.
 	 * @param array<string,mixed> $payload    Raw booking payload.
 	 * @return array<string,mixed>|WP_Error
 	 */
@@ -106,22 +106,37 @@ class HBE_Bookings {
 		$inserted = $wpdb->insert(
 			HBE_Bookings_Table::get_name(),
 			array(
-				'calendar_id'     => $calendar_id,
-				'service_id'      => $prepared['service_id'],
-				'status'          => $prepared['status'],
-				'customer_name'   => $prepared['customer_name'],
-				'customer_email'  => $prepared['customer_email'],
-				'customer_phone'  => $prepared['customer_phone'],
-				'customer_notes'  => $prepared['customer_notes'],
-				'start_datetime'  => $prepared['start_datetime'],
-				'end_datetime'    => $prepared['end_datetime'],
-				'timezone'        => $prepared['timezone'],
-				'meta'            => $prepared['meta'],
+				'calendar_id'    => $calendar_id,
+				'service_id'     => $prepared['service_id'],
+				'status'         => $prepared['status'],
+				'customer_name'  => $prepared['customer_name'],
+				'customer_email' => $prepared['customer_email'],
+				'customer_phone' => $prepared['customer_phone'],
+				'customer_notes' => $prepared['customer_notes'],
+				'start_datetime' => $prepared['start_datetime'],
+				'end_datetime'   => $prepared['end_datetime'],
+				'timezone'       => $prepared['timezone'],
+				'meta'           => $prepared['meta'],
 			),
 			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		if ( false === $inserted ) {
+			// Detect duplicate-key violation from the composite unique index
+			// (calendar_id, start_datetime, end_datetime, status) as a DB-level
+			// safeguard against race conditions.
+			$last_error = $wpdb->last_error ?? '';
+			if (
+				false !== strpos( $last_error, '1062' ) ||
+				false !== strpos( $last_error, 'Duplicate entry' )
+			) {
+				return new WP_Error(
+					'booking_conflict',
+					__( 'This timeslot is already booked.', 'h-bricks-elements' ),
+					array( 'status' => 409 )
+				);
+			}
+
 			return new WP_Error(
 				'hbe_booking_create_failed',
 				__( 'Booking could not be created.', 'h-bricks-elements' ),
@@ -145,8 +160,8 @@ class HBE_Bookings {
 	/**
 	 * Updates a booking.
 	 *
-	 * @param int                $calendar_id Calendar ID.
-	 * @param int                $booking_id  Booking ID.
+	 * @param int                 $calendar_id Calendar ID.
+	 * @param int                 $booking_id  Booking ID.
 	 * @param array<string,mixed> $payload    Raw booking payload.
 	 * @return array<string,mixed>|WP_Error
 	 */
@@ -192,16 +207,16 @@ class HBE_Bookings {
 		$updated = $wpdb->update(
 			HBE_Bookings_Table::get_name(),
 			array(
-				'service_id'      => $prepared['service_id'],
-				'status'          => $prepared['status'],
-				'customer_name'   => $prepared['customer_name'],
-				'customer_email'  => $prepared['customer_email'],
-				'customer_phone'  => $prepared['customer_phone'],
-				'customer_notes'  => $prepared['customer_notes'],
-				'start_datetime'  => $prepared['start_datetime'],
-				'end_datetime'    => $prepared['end_datetime'],
-				'timezone'        => $prepared['timezone'],
-				'meta'            => $prepared['meta'],
+				'service_id'     => $prepared['service_id'],
+				'status'         => $prepared['status'],
+				'customer_name'  => $prepared['customer_name'],
+				'customer_email' => $prepared['customer_email'],
+				'customer_phone' => $prepared['customer_phone'],
+				'customer_notes' => $prepared['customer_notes'],
+				'start_datetime' => $prepared['start_datetime'],
+				'end_datetime'   => $prepared['end_datetime'],
+				'timezone'       => $prepared['timezone'],
+				'meta'           => $prepared['meta'],
 			),
 			array(
 				'id'          => $booking_id,
@@ -393,15 +408,25 @@ class HBE_Bookings {
 			$timezone = 'UTC';
 		}
 
+		$customer_email = isset( $payload['customerEmail'] )
+			? sanitize_email( (string) $payload['customerEmail'] )
+			: (string) ( $existing['customer_email'] ?? '' );
+
+		if ( '' !== $customer_email && ! is_email( $customer_email ) ) {
+			return new WP_Error(
+				'invalid_email',
+				__( 'A valid email address is required.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		return array(
 			'service_id'     => isset( $payload['serviceId'] )
 				? sanitize_key( (string) $payload['serviceId'] )
 				: (string) ( $existing['service_id'] ?? '' ),
 			'status'         => $status,
 			'customer_name'  => $title,
-			'customer_email' => isset( $payload['customerEmail'] )
-				? sanitize_email( (string) $payload['customerEmail'] )
-				: (string) ( $existing['customer_email'] ?? '' ),
+			'customer_email' => $customer_email,
 			'customer_phone' => isset( $payload['customerPhone'] )
 				? sanitize_text_field( (string) $payload['customerPhone'] )
 				: (string) ( $existing['customer_phone'] ?? '' ),

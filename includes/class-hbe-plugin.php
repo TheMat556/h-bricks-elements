@@ -33,16 +33,29 @@ class HBE_Plugin {
 
 	/**
 	 * Logs wp_mail failures to the PHP error log.
+	 * PII (emails, names, phones) are never logged — only IDs.
 	 *
 	 * @param WP_Error $error Mail error.
 	 */
 	public static function log_mail_failure( \WP_Error $error ): void {
 		$context = HBE_Booking_Mail::get_active_mail_context();
+		// Redact potentially PII-containing data from the wp_mail error.
+		$error_data = $error->get_error_data();
+		if ( is_array( $error_data ) ) {
+			$safe_data = array(
+				'bookingId'  => isset( $error_data['bookingId'] ) ? (int) $error_data['bookingId'] : 0,
+				'calendarId' => isset( $error_data['calendarId'] ) ? (int) $error_data['calendarId'] : 0,
+				'code'       => isset( $error_data['code'] ) ? (string) $error_data['code'] : '',
+				'status'     => isset( $error_data['status'] ) ? (int) $error_data['status'] : 0,
+			);
+		} else {
+			$safe_data = null;
+		}
 		error_log(
 			'[HBE] wp_mail failed: '
 			. $error->get_error_message()
 			. ' — data: '
-			. wp_json_encode( $error->get_error_data() )
+			. wp_json_encode( $safe_data )
 			. ' — context: '
 			. wp_json_encode( $context )
 		);
@@ -52,7 +65,7 @@ class HBE_Plugin {
 	 * Sends a booking confirmation email via wp_mail().
 	 * SMTP delivery is handled by whatever mail plugin is active on the site.
 	 *
-	 * @param int                $calendar_id Calendar post ID.
+	 * @param int                 $calendar_id Calendar post ID.
 	 * @param array<string,mixed> $booking    Formatted booking row.
 	 * @return bool
 	 */
@@ -253,8 +266,13 @@ class HBE_Plugin {
 		}
 
 		// Handle confirmation POST.
-		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && ! empty( $_POST['hbe_confirm_cancel'] ) ) {
-			check_admin_referer( 'hbe_cancel_' . $booking_id . '_' . $calendar_id );
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? wp_unslash( (string) $_SERVER['REQUEST_METHOD'] ) : '';
+		if ( 'POST' === $request_method && ! empty( $_POST['hbe_confirm_cancel'] ) ) {
+			$nonce_value = isset( $_POST['_wpnonce'] ) ? wp_unslash( (string) $_POST['_wpnonce'] ) : '';
+			if ( ! wp_verify_nonce( $nonce_value, 'hbe_cancel_' . $booking_id . '_' . $calendar_id ) ) {
+				self::render_cancel_page( 'error', __( 'Invalid security token. Please refresh the page and try again.', 'h-bricks-elements' ) );
+				exit;
+			}
 			$result = HBE_Bookings::delete( $calendar_id, $booking_id );
 
 			if ( is_wp_error( $result ) ) {

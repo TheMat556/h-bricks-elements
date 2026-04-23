@@ -28,21 +28,21 @@ class HBE_Calendar_Settings {
 	 */
 	public static function get_defaults(): array {
 		return array(
-			'icon'          => '',
-			'publicBooking' => array(
+			'icon'                => '',
+			'publicBooking'       => array(
 				'displayName'         => '',
 				'defaultServiceLabel' => '',
 				'locationLabel'       => '',
 			),
 			'allowDoubleBookings' => false,
-			'adminOnly'     => false,
-			'slotSettings'  => array(
+			'adminOnly'           => false,
+			'slotSettings'        => array(
 				'sessionDuration' => 60,
 				'prepTime'        => 0,
 				'cleanupTime'     => 0,
 				'maxAdvanceDays'  => 0,
 			),
-			'mailSettings'  => array(
+			'mailSettings'        => array(
 				'enabled'   => true,
 				'fromName'  => '',
 				'fromEmail' => '',
@@ -64,7 +64,7 @@ class HBE_Calendar_Settings {
 					'lastError'          => '',
 				),
 			),
-			'workingHours'  => array(
+			'workingHours'        => array(
 				'monday'    => array(
 					'enabled'   => true,
 					'intervals' => array(
@@ -119,9 +119,9 @@ class HBE_Calendar_Settings {
 					'intervals' => array(),
 				),
 			),
-			'services'      => array(),
-			'exceptions'    => array(),
-			'selectionMode' => 'single',
+			'services'            => array(),
+			'exceptions'          => array(),
+			'selectionMode'       => 'single',
 		);
 	}
 
@@ -157,7 +157,7 @@ class HBE_Calendar_Settings {
 	/**
 	 * Stores sanitized settings for a calendar.
 	 *
-	 * @param int                $calendar_id Calendar post ID.
+	 * @param int                 $calendar_id Calendar post ID.
 	 * @param array<string,mixed> $settings   Settings to persist.
 	 * @return array<string,mixed>|WP_Error
 	 */
@@ -184,42 +184,42 @@ class HBE_Calendar_Settings {
 		$defaults = self::get_defaults();
 
 		return array(
-			'icon'          => self::sanitize_icon(
+			'icon'                => self::sanitize_icon(
 				isset( $settings['icon'] ) ? (string) $settings['icon'] : ''
 			),
 			'allowDoubleBookings' => ! empty( $settings['allowDoubleBookings'] ),
-			'adminOnly'     => ! empty( $settings['adminOnly'] ),
-			'publicBooking' => self::sanitize_public_booking(
+			'adminOnly'           => ! empty( $settings['adminOnly'] ),
+			'publicBooking'       => self::sanitize_public_booking(
 				isset( $settings['publicBooking'] ) && is_array( $settings['publicBooking'] )
 					? $settings['publicBooking']
 					: array()
 			),
-			'slotSettings'  => self::sanitize_slot_settings(
+			'slotSettings'        => self::sanitize_slot_settings(
 				isset( $settings['slotSettings'] ) && is_array( $settings['slotSettings'] )
 					? $settings['slotSettings']
 					: array()
 			),
-			'mailSettings'  => self::sanitize_mail_settings(
+			'mailSettings'        => self::sanitize_mail_settings(
 				isset( $settings['mailSettings'] ) && is_array( $settings['mailSettings'] )
 					? $settings['mailSettings']
 					: array()
 			),
-			'workingHours'  => self::sanitize_working_hours(
+			'workingHours'        => self::sanitize_working_hours(
 				isset( $settings['workingHours'] ) && is_array( $settings['workingHours'] )
 					? $settings['workingHours']
 					: $defaults['workingHours']
 			),
-			'services'      => self::sanitize_services(
+			'services'            => self::sanitize_services(
 				isset( $settings['services'] ) && is_array( $settings['services'] )
 					? $settings['services']
 					: array()
 			),
-			'exceptions'    => self::sanitize_exceptions(
+			'exceptions'          => self::sanitize_exceptions(
 				isset( $settings['exceptions'] ) && is_array( $settings['exceptions'] )
 					? $settings['exceptions']
 					: array()
 			),
-			'selectionMode' => self::sanitize_selection_mode(
+			'selectionMode'       => self::sanitize_selection_mode(
 				isset( $settings['selectionMode'] ) ? (string) $settings['selectionMode'] : 'single'
 			),
 		);
@@ -364,11 +364,13 @@ class HBE_Calendar_Settings {
 	}
 
 	/**
+	 * Sanitizes the mail template structure.
+	 *
 	 * @param array<string,mixed> $template Raw template data.
 	 * @return array<string,mixed>
 	 */
 	private static function sanitize_mail_template( array $template ): array {
-		$defaults = self::get_defaults()['mailSettings']['template'];
+		$defaults  = self::get_defaults()['mailSettings']['template'];
 		$sanitized = array(
 			'primaryColor'       => isset( $template['primaryColor'] )
 				? sanitize_hex_color( (string) $template['primaryColor'] ) ?? $defaults['primaryColor']
@@ -395,11 +397,34 @@ class HBE_Calendar_Settings {
 				? (bool) $template['showBookingDetails']
 				: (bool) $defaults['showBookingDetails'],
 			'compiledHtml'       => isset( $template['compiledHtml'] )
-				? (string) $template['compiledHtml']
+				? self::sanitize_compiled_html( (string) $template['compiledHtml'] )
 				: '',
 		);
 
 		return array_merge( $sanitized, HBE_Booking_Mail::build_template_metadata( $template ) );
+	}
+
+	/**
+	 * Strips dangerous content from compiled email HTML.
+	 *
+	 * Removes <script> tags, on* event handlers, and javascript: URIs.
+	 *
+	 * @param string $html Raw compiled HTML.
+	 * @return string
+	 */
+	private static function sanitize_compiled_html( string $html ): string {
+		// Remove <script>...</script> blocks (case-insensitive).
+		$html = preg_replace( '/<script\b[^>]*>.*?<\/script>/is', '', $html );
+		// Remove any remaining standalone <script ...> tags without closing.
+		$html = preg_replace( '/<script\b[^>]*\/?>/i', '', $html );
+
+		// Remove on* event handler attributes (onclick, onload, onerror, etc.).
+		$html = preg_replace( '/\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html );
+
+		// Remove javascript: URIs in href/src/action attributes.
+		$html = preg_replace( '/\b(href|src|action|formaction|data)\s*=\s*(?:"\s*javascript:[^"]*"|\'\s*javascript:[^\']*\'|javascript:[^\s>]*)/i', '$1=""', $html );
+
+		return $html;
 	}
 
 	/**

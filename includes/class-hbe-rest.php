@@ -275,6 +275,19 @@ class HBE_REST {
 			)
 		);
 
+		/**
+		 * Global email template endpoint (GET/PUT).
+		 *
+		 * Template precedence:
+		 * - Per-calendar templates (stored in post meta under _hbe_calendar_settings)
+		 *   take precedence over the global template when they exist.
+		 * - The global template (this endpoint) serves as the site-wide fallback
+		 *   and is used by any calendar that has not defined its own template.
+		 *
+		 * @deprecated Per-calendar templates are the primary UX; this global
+		 *             endpoint exists only as a fallback for calendars without
+		 *             a custom template.
+		 */
 		register_rest_route(
 			self::NAMESPACE,
 			'/admin/email-template',
@@ -311,6 +324,10 @@ class HBE_REST {
 	/**
 	 * Returns the global email template.
 	 *
+	 * Acts as the site-wide fallback when a calendar has no per-calendar template.
+	 *
+	 * @deprecated The per-calendar template (post meta) is the primary UX.
+	 *             This global endpoint exists as a site-wide fallback only.
 	 * @return WP_REST_Response
 	 */
 	public static function get_email_template(): WP_REST_Response {
@@ -734,18 +751,17 @@ class HBE_REST {
 
 		// Rate limit: 5 requests per IP per calendar per 10 minutes.
 		$ip       = self::get_client_ip();
-		$rate_key = 'hbe_rl_' . md5( $ip . '_' . (int) $calendar->ID );
+		$rate_key = 'hbe_rl_' . wp_hash( $ip . '_' . (int) $calendar->ID );
 		$attempts = (int) get_transient( $rate_key );
 
 		if ( $attempts >= 5 ) {
+			header( 'Retry-After: 600' );
 			return new WP_Error(
 				'hbe_rate_limit',
 				__( 'Too many booking requests. Please try again later.', 'h-bricks-elements' ),
 				array( 'status' => 429 )
 			);
 		}
-
-		set_transient( $rate_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
 
 		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
 
@@ -766,6 +782,9 @@ class HBE_REST {
 		if ( is_wp_error( $booking ) ) {
 			return $booking;
 		}
+
+		// Increment rate counter only after a successful booking.
+		set_transient( $rate_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
 
 		HBE_Plugin::send_booking_confirmation( (int) $calendar->ID, $booking );
 
@@ -928,18 +947,56 @@ class HBE_REST {
 	}
 
 	/**
-	 * Returns the client IP address from the TCP connection.
+	 * Returns the client IP address.
+	 *
+	 * Proxy headers (X-Forwarded-For, X-Real-IP, CF-Connecting-IP) are only
+	 * trusted when the direct peer (REMOTE_ADDR) is a private/local address,
+	 * indicating the request passed through a reverse proxy. Otherwise
+	 * REMOTE_ADDR is used directly to prevent header spoofing.
 	 *
 	 * @return string
 	 */
 	private static function get_client_ip(): string {
-		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validated below with FILTER_VALIDATE_IP.
 
-		if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-			return $ip;
+		if ( ! filter_var( $remote_addr, FILTER_VALIDATE_IP ) ) {
+			return 'unknown';
 		}
 
-		return 'unknown';
+		// If the direct peer is NOT a private/local address, trust only REMOTE_ADDR.
+		if ( ! self::is_private_ip( $remote_addr ) ) {
+			return $remote_addr;
+		}
+
+		// Peer is a known proxy → inspect forwarded headers in order of trust.
+		$proxy_headers = array(
+			'HTTP_CF_CONNECTING_IP', // Cloudflare – most trustworthy when present.
+			'HTTP_X_REAL_IP',
+			'HTTP_X_FORWARDED_FOR',
+		);
+
+		foreach ( $proxy_headers as $header ) {
+			if ( ! empty( $_SERVER[ $header ] ) ) {
+				$raw = (string) wp_unslash( $_SERVER[ $header ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validated below with FILTER_VALIDATE_IP.
+				$ip  = trim( strtok( $raw, ',' ) );
+
+				if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+					return $ip;
+				}
+			}
+		}
+
+		return $remote_addr;
+	}
+
+	/**
+	 * Checks whether an IP address belongs to a private/local range.
+	 *
+	 * @param string $ip Validated IP address.
+	 * @return bool
+	 */
+	private static function is_private_ip( string $ip ): bool {
+		return (bool) filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) === false;
 	}
 
 	/**
