@@ -4,10 +4,15 @@ import {
 	applyResponsiveLayoutMode,
 	createInitialBookingState,
 	normalizeLayoutMode,
+	resetCompletedBooking,
+	setBookingNotice,
 	setBookingStep,
+	shouldAutoAdvanceStepper,
 	syncBookingLayoutState,
 } from "./state";
 import type { BookingState, PublicCalendar } from "./types";
+import { getInitialServiceSelection, isDateAvailable, parseDateKey } from "./slots";
+import { ensureBookingsLoaded } from "./api";
 import {
 	goToStepperPanel,
 	mountCalendar,
@@ -20,6 +25,7 @@ import {
 	renderSlots,
 	selectFirstAvailableDate,
 	submitPublicBooking,
+	syncRenderedSlotSelection,
 	toggleServiceSelection,
 	transitionFromSuccessToAvailability,
 	transitionInlineBookingStep,
@@ -27,6 +33,7 @@ import {
 import {
 	ensureStepperProgressElement,
 	getInitialStepperPanel,
+	setStepperDirection,
 	syncStepperUI,
 } from "./ui/stepper";
 

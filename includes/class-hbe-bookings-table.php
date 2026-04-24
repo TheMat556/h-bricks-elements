@@ -58,7 +58,7 @@ class HBE_Bookings_Table {
 			KEY start_datetime (start_datetime),
 			KEY end_datetime (end_datetime),
 			KEY status (status),
-			UNIQUE KEY unique_booking_slot (calendar_id, start_datetime, end_datetime, status)
+			UNIQUE KEY unique_booking_slot (calendar_id, start_datetime, end_datetime)
 		) {$charset_collate};";
 
 		dbDelta( $sql );

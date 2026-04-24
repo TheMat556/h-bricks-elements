@@ -1,3 +1,8 @@
+import {
+	BgColorsOutlined,
+	FileTextOutlined,
+	SettingOutlined,
+} from "@ant-design/icons";
 import { render } from "@react-email/render";
 import {
 	Button,
@@ -287,28 +292,44 @@ function LogoPicker({
 	);
 }
 
-function SectionLabel({
+function SectionCard({
+	icon,
+	title,
 	children,
-	style,
 }: {
+	icon: React.ReactNode;
+	title: string;
 	children: React.ReactNode;
-	style?: React.CSSProperties;
 }) {
+	const { token } = theme.useToken();
 	return (
-		<Typography.Text
-			type="secondary"
-			strong
+		<div
 			style={{
-				display: "block",
-				fontSize: 11,
-				letterSpacing: 0.6,
-				textTransform: "uppercase",
-				marginBottom: 12,
-				...style,
+				background: token.colorFillAlter,
+				border: `1px solid ${token.colorBorder}`,
+				borderRadius: token.borderRadiusLG,
+				padding: 16,
 			}}
 		>
+			<Flex align="center" gap={8} style={{ marginBottom: 14 }}>
+				<span style={{ color: token.colorTextSecondary, fontSize: 14 }}>
+					{icon}
+				</span>
+				<Typography.Text
+					type="secondary"
+					strong
+					style={{
+						fontSize: 11,
+						letterSpacing: 0.6,
+						textTransform: "uppercase",
+						lineHeight: 1.2,
+					}}
+				>
+					{title}
+				</Typography.Text>
+			</Flex>
 			{children}
-		</Typography.Text>
+		</div>
 	);
 }
 
@@ -325,17 +346,30 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function VariableChips({ onInsert }: { onInsert: (variable: string) => void }) {
 	return (
-		<Flex gap={6} wrap="wrap" style={{ marginBottom: 8 }}>
-			{VARIABLES.map((v) => (
-				<Button
-					key={v.value}
-					size="small"
-					style={{ fontFamily: "monospace", fontSize: 12 }}
-					onClick={() => onInsert(v.value)}
-				>
-					{v.label}
-				</Button>
-			))}
+		<Flex vertical gap={6} style={{ marginBottom: 8 }}>
+			<Typography.Text
+				type="secondary"
+				style={{ fontSize: 11, lineHeight: 1.2 }}
+			>
+				{tr("Insert variable")}
+			</Typography.Text>
+			<Flex gap={6} wrap="wrap">
+				{VARIABLES.map((v) => (
+					<Tag
+						key={v.value}
+						color="processing"
+						style={{
+							cursor: "pointer",
+							fontFamily: "monospace",
+							fontSize: 12,
+							margin: 0,
+						}}
+						onClick={() => onInsert(v.value)}
+					>
+						{v.label}
+					</Tag>
+				))}
+			</Flex>
 		</Flex>
 	);
 }
@@ -362,7 +396,7 @@ function insertAtCursor(
 	});
 }
 
-function markTemplateStale(
+export function markTemplateStale(
 	template: EmailTemplateSettings,
 	patch: Partial<EmailTemplateSettings>,
 ): EmailTemplateSettings {
@@ -503,7 +537,7 @@ export function EmailDesigner({
 
 	return (
 		<Flex
-			gap={20}
+			gap={24}
 			style={{
 				minHeight: 560,
 				alignItems: "stretch",
@@ -516,125 +550,128 @@ export function EmailDesigner({
 					minWidth: 0,
 					display: "flex",
 					flexDirection: "column",
-					gap: 0,
+					gap: 24,
 					overflowY: "auto",
 					paddingRight: 4,
 				}}
 			>
 				{/* ── Branding ── */}
-				<SectionLabel>{tr("Branding")}</SectionLabel>
+				<SectionCard icon={<BgColorsOutlined />} title={tr("Branding")}>
+					<LogoPicker
+						value={template.logoUrl}
+						attachmentId={template.logoAttachmentId}
+						logoWidth={template.logoWidth}
+						logoHeight={template.logoHeight}
+						onChange={({ url, attachmentId, logoWidth, logoHeight }) =>
+							update({
+								logoUrl: url,
+								logoAttachmentId: attachmentId,
+								...(logoWidth !== undefined && { logoWidth }),
+								...(logoHeight !== undefined && { logoHeight }),
+							})
+						}
+					/>
 
-				<LogoPicker
-					value={template.logoUrl}
-					attachmentId={template.logoAttachmentId}
-					logoWidth={template.logoWidth}
-					logoHeight={template.logoHeight}
-					onChange={({ url, attachmentId, logoWidth, logoHeight }) =>
-						update({
-							logoUrl: url,
-							logoAttachmentId: attachmentId,
-							...(logoWidth !== undefined && { logoWidth }),
-							...(logoHeight !== undefined && { logoHeight }),
-						})
-					}
-				/>
+					<Divider style={{ margin: "16px 0" }} />
 
-				<Divider style={{ margin: "20px 0" }} />
-
-				<Flex gap={20} wrap="wrap" style={{ marginBottom: 20 }}>
-					<div>
-						<FieldLabel>{tr("Accent colour")}</FieldLabel>
-						<ColorPicker
-							value={template.primaryColor}
-							onChange={(_, hex) => update({ primaryColor: hex })}
-							showText
-						/>
-					</div>
-					<div>
-						<FieldLabel>{tr("Background colour")}</FieldLabel>
-						<ColorPicker
-							value={template.backgroundColor}
-							onChange={(_, hex) => update({ backgroundColor: hex })}
-							showText
-						/>
-					</div>
-				</Flex>
+					<Flex align="flex-end" gap={16} wrap="wrap">
+						<Flex align="center" gap={10}>
+							<Typography.Text strong style={{ fontSize: 13 }}>
+								{tr("Accent")}
+							</Typography.Text>
+							<ColorPicker
+								value={template.primaryColor}
+								onChange={(_, hex) => update({ primaryColor: hex })}
+								showText
+								size="small"
+							/>
+						</Flex>
+						<Flex align="center" gap={10}>
+							<Typography.Text strong style={{ fontSize: 13 }}>
+								{tr("Background")}
+							</Typography.Text>
+							<ColorPicker
+								value={template.backgroundColor}
+								onChange={(_, hex) => update({ backgroundColor: hex })}
+								showText
+								size="small"
+							/>
+						</Flex>
+					</Flex>
+				</SectionCard>
 
 				{/* ── Content ── */}
-				<Divider style={{ margin: "0 0 20px 0" }} />
-				<SectionLabel>{tr("Content")}</SectionLabel>
+				<SectionCard icon={<FileTextOutlined />} title={tr("Content")}>
+					<div style={{ marginBottom: 16 }}>
+						<FieldLabel>{tr("Greeting")}</FieldLabel>
+						<VariableChips
+							onInsert={(v) =>
+								insertAtCursor(greetingRef, v, template.greeting, (next) =>
+									update({ greeting: next }),
+								)
+							}
+						/>
+						<TextArea
+							ref={greetingRef}
+							rows={2}
+							value={template.greeting}
+							onChange={(e) => update({ greeting: e.target.value })}
+						/>
+					</div>
 
-				<div style={{ marginBottom: 16 }}>
-					<FieldLabel>{tr("Greeting")}</FieldLabel>
-					<VariableChips
-						onInsert={(v) =>
-							insertAtCursor(greetingRef, v, template.greeting, (next) =>
-								update({ greeting: next }),
-							)
-						}
-					/>
-					<TextArea
-						ref={greetingRef}
-						rows={2}
-						value={template.greeting}
-						onChange={(e) => update({ greeting: e.target.value })}
-					/>
-				</div>
+					<div style={{ marginBottom: 16 }}>
+						<FieldLabel>{tr("Message")}</FieldLabel>
+						<VariableChips
+							onInsert={(v) =>
+								insertAtCursor(bodyRef, v, template.body, (next) =>
+									update({ body: next }),
+								)
+							}
+						/>
+						<TextArea
+							ref={bodyRef}
+							rows={4}
+							value={template.body}
+							onChange={(e) => update({ body: e.target.value })}
+						/>
+					</div>
 
-				<div style={{ marginBottom: 16 }}>
-					<FieldLabel>{tr("Message")}</FieldLabel>
-					<VariableChips
-						onInsert={(v) =>
-							insertAtCursor(bodyRef, v, template.body, (next) =>
-								update({ body: next }),
-							)
-						}
-					/>
-					<TextArea
-						ref={bodyRef}
-						rows={4}
-						value={template.body}
-						onChange={(e) => update({ body: e.target.value })}
-					/>
-				</div>
-
-				<div style={{ marginBottom: 20 }}>
-					<FieldLabel>{tr("Footer text")}</FieldLabel>
-					<Input
-						value={template.footer}
-						onChange={(e) => update({ footer: e.target.value })}
-					/>
-				</div>
+					<div>
+						<FieldLabel>{tr("Footer text")}</FieldLabel>
+						<Input
+							value={template.footer}
+							onChange={(e) => update({ footer: e.target.value })}
+						/>
+					</div>
+				</SectionCard>
 
 				{/* ── Options ── */}
-				<Divider style={{ margin: "0 0 20px 0" }} />
-				<SectionLabel>{tr("Options")}</SectionLabel>
-
-				{/* Show booking details toggle */}
-				<Flex
-					align="center"
-					justify="space-between"
-					gap={12}
-					style={{
-						padding: "14px 16px",
-						borderRadius: 8,
-						border: `1px solid ${token.colorBorder}`,
-						background: token.colorFillAlter,
-					}}
-				>
-					<div>
-						<Typography.Text strong style={{ display: "block" }}>
-							{tr("Show booking details")}
-						</Typography.Text>
-						<Typography.Text type="secondary" style={{ fontSize: 12 }}>
-							{tr("Include a details block with date, time, and service.")}
-						</Typography.Text>
-					</div>
-					<Switch
-						checked={template.showBookingDetails}
-						onChange={(checked) => update({ showBookingDetails: checked })}
-					/>
-				</Flex>
+				<SectionCard icon={<SettingOutlined />} title={tr("Options")}>
+					<Flex
+						align="center"
+						justify="space-between"
+						gap={12}
+						style={{
+							padding: "14px 16px",
+							borderRadius: token.borderRadius,
+							border: `1px solid ${token.colorBorder}`,
+							background: token.colorBgContainer,
+						}}
+					>
+						<div>
+							<Typography.Text strong style={{ display: "block" }}>
+								{tr("Show booking details")}
+							</Typography.Text>
+							<Typography.Text type="secondary" style={{ fontSize: 12 }}>
+								{tr("Include a details block with date, time, and service.")}
+							</Typography.Text>
+						</div>
+						<Switch
+							checked={template.showBookingDetails}
+							onChange={(checked) => update({ showBookingDetails: checked })}
+						/>
+					</Flex>
+				</SectionCard>
 			</div>
 
 			{/* Right pane — live preview */}
@@ -646,38 +683,102 @@ export function EmailDesigner({
 					flexDirection: "column",
 				}}
 			>
-				<Flex
-					align="center"
-					justify="space-between"
-					gap={12}
-					style={{ marginBottom: 4 }}
-				>
-					<SectionLabel style={{ margin: 0 }}>
-						{tr("Live Preview")}
-					</SectionLabel>
-					<Tag color={statusMeta.color} style={{ marginBottom: 12 }}>
-						{statusMeta.label}
-					</Tag>
-				</Flex>
-				<Typography.Text
-					type="secondary"
-					style={{ display: "block", marginBottom: 12, fontSize: 12 }}
-				>
-					{statusMeta.help}
-				</Typography.Text>
-				<iframe
-					srcDoc={previewHtml}
-					title="Email preview"
+				{/* Browser-frame preview */}
+				<div
 					style={{
 						flex: 1,
-						width: "100%",
-						minHeight: 500,
-						border: `1px solid ${token.colorBorder}`,
-						borderRadius: 8,
-						background: "#fff",
+						display: "flex",
+						flexDirection: "column",
+						border: `1px solid ${token.colorBorderSecondary ?? token.colorBorder}`,
+						borderRadius: token.borderRadiusLG,
+						background: token.colorBgContainer,
+						boxShadow: token.boxShadowTertiary,
+						overflow: "hidden",
 					}}
-					sandbox="allow-same-origin"
-				/>
+				>
+					{/* Top bar */}
+					<Flex
+						align="center"
+						justify="space-between"
+						gap={12}
+						style={{
+							padding: "10px 16px",
+							borderBottom: `1px solid ${token.colorBorderSecondary ?? token.colorBorder}`,
+							background: token.colorFillQuaternary,
+						}}
+					>
+						<Flex align="center" gap={6}>
+							<span
+								style={{
+									width: 10,
+									height: 10,
+									borderRadius: "50%",
+									background: token.colorError,
+									display: "inline-block",
+								}}
+							/>
+							<span
+								style={{
+									width: 10,
+									height: 10,
+									borderRadius: "50%",
+									background: token.colorWarning,
+									display: "inline-block",
+								}}
+							/>
+							<span
+								style={{
+									width: 10,
+									height: 10,
+									borderRadius: "50%",
+									background: token.colorSuccess,
+									display: "inline-block",
+								}}
+							/>
+						</Flex>
+						<Flex align="center" gap={12}>
+							<Typography.Text
+								type="secondary"
+								style={{
+									fontSize: 11,
+									letterSpacing: 0.6,
+									textTransform: "uppercase",
+								}}
+							>
+								{tr("Live Preview")}
+							</Typography.Text>
+							<Tag color={statusMeta.color} style={{ margin: 0 }}>
+								{statusMeta.label}
+							</Tag>
+						</Flex>
+					</Flex>
+
+					<Typography.Text
+						type="secondary"
+						style={{
+							display: "block",
+							padding: "8px 16px",
+							fontSize: 12,
+							borderBottom: `1px solid ${token.colorBorderSecondary ?? token.colorBorder}`,
+							background: token.colorFillAlter,
+						}}
+					>
+						{statusMeta.help}
+					</Typography.Text>
+
+					<iframe
+						srcDoc={previewHtml}
+						title="Email preview"
+						style={{
+							flex: 1,
+							width: "100%",
+							minHeight: 460,
+							border: 0,
+							background: "#fff",
+						}}
+						sandbox="allow-same-origin"
+					/>
+				</div>
 			</div>
 		</Flex>
 	);

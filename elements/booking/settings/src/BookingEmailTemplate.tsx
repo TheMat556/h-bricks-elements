@@ -17,6 +17,12 @@ import {
 export interface BookingEmailTemplateProps {
 	primaryColor: string;
 	backgroundColor: string;
+	textColor?: string;
+	secondaryTextColor?: string;
+	mutedTextColor?: string;
+	borderColor?: string;
+	buttonBgColor?: string;
+	buttonTextColor?: string;
 	greeting: string;
 	body: string;
 	footer: string;
@@ -32,7 +38,10 @@ export interface BookingEmailTemplateProps {
 	cancelUrl: string;
 }
 
-function resolveVars(text: string, vars: Record<string, string>): string {
+export function resolveVars(
+	text: string,
+	vars: Record<string, string>,
+): string {
 	return Object.entries(vars).reduce(
 		(acc, [k, v]) => acc.replaceAll(k, v),
 		text,
@@ -40,7 +49,7 @@ function resolveVars(text: string, vars: Record<string, string>): string {
 }
 
 /** Converts a hex colour like #2563eb to rgba(r,g,b,opacity) */
-function hexToRgba(hex: string, opacity: number): string {
+export function hexToRgba(hex: string, opacity: number): string {
 	const clean = hex.replace("#", "");
 	const r = parseInt(clean.slice(0, 2), 16);
 	const g = parseInt(clean.slice(2, 4), 16);
@@ -51,7 +60,13 @@ function hexToRgba(hex: string, opacity: number): string {
 
 export function BookingEmailTemplate({
 	primaryColor,
-	backgroundColor: _backgroundColor,
+	backgroundColor,
+	textColor = "#111827",
+	secondaryTextColor = "#6b7280",
+	mutedTextColor = "#9ca3af",
+	borderColor = "#e5e7eb",
+	buttonBgColor = "#111827",
+	buttonTextColor = "#ffffff",
 	greeting,
 	body,
 	footer,
@@ -88,7 +103,7 @@ export function BookingEmailTemplate({
 			<Preview>Booking confirmed!</Preview>
 			<Body
 				style={{
-					backgroundColor: "#ffffff",
+					backgroundColor,
 					fontFamily:
 						'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
 					margin: 0,
@@ -129,7 +144,7 @@ export function BookingEmailTemplate({
 							style={{
 								fontSize: 36,
 								fontWeight: 600,
-								color: "#111827",
+								color: textColor,
 								margin: "0 0 16px 0",
 								lineHeight: "1.2",
 								textAlign: "center",
@@ -140,7 +155,7 @@ export function BookingEmailTemplate({
 						<Text
 							style={{
 								fontSize: 16,
-								color: "#6b7280",
+								color: secondaryTextColor,
 								margin: "0 auto",
 								maxWidth: 440,
 								textAlign: "center",
@@ -180,7 +195,7 @@ export function BookingEmailTemplate({
 									style={{
 										fontSize: 40,
 										fontWeight: 700,
-										color: "#111827",
+										color: textColor,
 										margin: "0 0 4px 0",
 										lineHeight: "1",
 										textAlign: "center",
@@ -192,7 +207,7 @@ export function BookingEmailTemplate({
 									style={{
 										fontSize: 22,
 										fontWeight: 500,
-										color: "#374151",
+										color: secondaryTextColor,
 										margin: "0",
 										textAlign: "center",
 									}}
@@ -245,7 +260,7 @@ export function BookingEmailTemplate({
 													<Text
 														style={{
 															fontSize: 16,
-															color: "#111827",
+															color: textColor,
 															margin: 0,
 															fontWeight: 600,
 														}}
@@ -267,7 +282,7 @@ export function BookingEmailTemplate({
 							<Text
 								style={{
 									fontSize: 16,
-									color: "#374151",
+									color: secondaryTextColor,
 									margin: "0 auto",
 									maxWidth: 480,
 									textAlign: "center",
@@ -285,7 +300,7 @@ export function BookingEmailTemplate({
 							<Text
 								style={{
 									fontSize: 13,
-									color: "#9ca3af",
+									color: mutedTextColor,
 									margin: "0 0 12px 0",
 									textAlign: "center",
 								}}
@@ -296,8 +311,8 @@ export function BookingEmailTemplate({
 								href={cancelUrl}
 								style={{
 									display: "inline-block",
-									backgroundColor: "#111827",
-									color: "#ffffff",
+									backgroundColor: buttonBgColor,
+									color: buttonTextColor,
 									fontSize: 14,
 									fontWeight: 600,
 									textDecoration: "none",
@@ -312,11 +327,11 @@ export function BookingEmailTemplate({
 
 					{/* Footer */}
 					<Section style={{ padding: "40px 32px 32px", textAlign: "center" }}>
-						<Hr style={{ borderColor: "#e5e7eb", marginBottom: 24 }} />
+						<Hr style={{ borderColor: borderColor, marginBottom: 24 }} />
 						<Text
 							style={{
 								fontSize: 13,
-								color: "#9ca3af",
+								color: mutedTextColor,
 								margin: "0 0 8px 0",
 								textAlign: "center",
 								lineHeight: "1.6",
@@ -327,7 +342,7 @@ export function BookingEmailTemplate({
 						<Text
 							style={{
 								fontSize: 11,
-								color: "#d1d5db",
+								color: mutedTextColor,
 								margin: 0,
 								textAlign: "center",
 							}}

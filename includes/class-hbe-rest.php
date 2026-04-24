@@ -129,10 +129,25 @@ class HBE_REST {
 							'required'          => false,
 							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
 						),
-						'end'   => array(
+						'end'      => array(
 							'type'              => 'string',
 							'required'          => false,
 							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
+						),
+						'per_page' => array(
+							'type'              => 'integer',
+							'required'          => false,
+							'default'           => 100,
+							'minimum'           => 1,
+							'maximum'           => 500,
+							'sanitize_callback' => 'absint',
+						),
+						'page'     => array(
+							'type'              => 'integer',
+							'required'          => false,
+							'default'           => 1,
+							'minimum'           => 1,
+							'sanitize_callback' => 'absint',
 						),
 					),
 				),
@@ -218,20 +233,35 @@ class HBE_REST {
 					'callback'            => array( __CLASS__, 'get_public_calendar_bookings' ),
 					'permission_callback' => '__return_true',
 					'args'                => array(
-						'id'    => array(
+						'id'       => array(
 							'type'              => 'integer',
 							'required'          => true,
 							'sanitize_callback' => 'absint',
 						),
-						'start' => array(
+						'start'    => array(
 							'type'              => 'string',
 							'required'          => false,
 							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
 						),
-						'end'   => array(
+						'end'      => array(
 							'type'              => 'string',
 							'required'          => false,
 							'validate_callback' => array( __CLASS__, 'validate_date_param' ),
+						),
+						'per_page' => array(
+							'type'              => 'integer',
+							'required'          => false,
+							'default'           => 100,
+							'minimum'           => 1,
+							'maximum'           => 500,
+							'sanitize_callback' => 'absint',
+						),
+						'page'     => array(
+							'type'              => 'integer',
+							'required'          => false,
+							'default'           => 1,
+							'minimum'           => 1,
+							'sanitize_callback' => 'absint',
 						),
 					),
 				),
@@ -539,10 +569,16 @@ class HBE_REST {
 
 		$start    = $request->get_param( 'start' );
 		$end      = $request->get_param( 'end' );
+		$per_page_raw = $request->get_param( 'per_page' );
+		$page_raw     = $request->get_param( 'page' );
+		$per_page     = absint( null !== $per_page_raw ? $per_page_raw : 100 );
+		$page         = absint( null !== $page_raw ? $page_raw : 1 );
 		$bookings = HBE_Bookings::list_for_calendar(
 			(int) $calendar->ID,
 			is_string( $start ) && '' !== $start ? $start : null,
-			is_string( $end ) && '' !== $end ? $end : null
+			is_string( $end ) && '' !== $end ? $end : null,
+			$per_page,
+			$page
 		);
 
 		if ( is_wp_error( $bookings ) ) {
@@ -661,7 +697,7 @@ class HBE_REST {
 			return $calendar;
 		}
 
-		return new WP_REST_Response(
+		$response = new WP_REST_Response(
 			array(
 				'id'       => $calendar->ID,
 				'title'    => $calendar->post_title,
@@ -669,6 +705,9 @@ class HBE_REST {
 				'settings' => self::public_calendar_dto( HBE_Calendar_Settings::get( (int) $calendar->ID ) ),
 			)
 		);
+		$response->header( 'Cache-Control', 'public, max-age=60' );
+
+		return $response;
 	}
 
 	/**
@@ -686,10 +725,16 @@ class HBE_REST {
 
 		$start    = $request->get_param( 'start' );
 		$end      = $request->get_param( 'end' );
+		$per_page_raw = $request->get_param( 'per_page' );
+		$page_raw     = $request->get_param( 'page' );
+		$per_page     = absint( null !== $per_page_raw ? $per_page_raw : 100 );
+		$page         = absint( null !== $page_raw ? $page_raw : 1 );
 		$bookings = HBE_Bookings::list_for_calendar(
 			(int) $calendar->ID,
 			is_string( $start ) && '' !== $start ? $start : null,
-			is_string( $end ) && '' !== $end ? $end : null
+			is_string( $end ) && '' !== $end ? $end : null,
+			$per_page,
+			$page
 		);
 
 		if ( is_wp_error( $bookings ) ) {
@@ -707,22 +752,22 @@ class HBE_REST {
 			)
 		);
 
-		return new WP_REST_Response(
+		$response = new WP_REST_Response(
 			array(
 				'items' => array_map(
 					static function ( $booking ) {
 						return array(
-							'id'        => isset( $booking['id'] ) ? (int) $booking['id'] : 0,
-							'start'     => isset( $booking['start'] ) ? (string) $booking['start'] : '',
-							'end'       => isset( $booking['end'] ) ? (string) $booking['end'] : '',
-							'status'    => isset( $booking['status'] ) ? (string) $booking['status'] : '',
-							'serviceId' => isset( $booking['serviceId'] ) ? (string) $booking['serviceId'] : '',
+							'start' => isset( $booking['start'] ) ? (string) $booking['start'] : '',
+							'end'   => isset( $booking['end'] ) ? (string) $booking['end'] : '',
 						);
 					},
 					$visible_bookings
 				),
 			)
 		);
+		$response->header( 'Cache-Control', 'public, max-age=60' );
+
+		return $response;
 	}
 
 	/**
@@ -886,7 +931,13 @@ class HBE_REST {
 			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'to' => $to ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'to'      => $to,
+			),
+			200
+		);
 	}
 
 	/**
@@ -1012,7 +1063,7 @@ class HBE_REST {
 			return $json_params;
 		}
 
-		$params = $request->get_params();
+		$params = $request->get_body_params();
 
 		return is_array( $params ) ? $params : array();
 	}

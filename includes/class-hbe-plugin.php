@@ -76,13 +76,21 @@ class HBE_Plugin {
 			array( 'force_enabled' => true )
 		);
 		if ( is_wp_error( $result ) ) {
+			$error_data = $result->get_error_data();
+			$safe_data  = is_array( $error_data )
+				? array(
+					'bookingId'  => isset( $error_data['bookingId'] ) ? (int) $error_data['bookingId'] : 0,
+					'calendarId' => isset( $error_data['calendarId'] ) ? (int) $error_data['calendarId'] : 0,
+					'code'       => isset( $error_data['code'] ) ? (string) $error_data['code'] : '',
+				)
+				: null;
 			error_log(
 				sprintf(
 					'[HBE] send_booking_confirmation failed calendar=%d booking=%d error=%s data=%s',
 					$calendar_id,
 					isset( $booking['id'] ) ? (int) $booking['id'] : 0,
 					$result->get_error_message(),
-					wp_json_encode( $result->get_error_data() )
+					wp_json_encode( $safe_data )
 				)
 			);
 			return false;

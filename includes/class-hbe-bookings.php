@@ -15,17 +15,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 class HBE_Bookings {
 
 	/**
+	 * Explicit column list used in SELECT queries.
+	 */
+	const COLUMNS = 'id, calendar_id, service_id, status, customer_name, customer_email, customer_phone, customer_notes, start_datetime, end_datetime, timezone, meta, created_at, updated_at';
+
+	/**
 	 * Returns bookings for one calendar, optionally filtered by overlapping range.
 	 *
 	 * @param int         $calendar_id Calendar ID.
 	 * @param string|null $start_iso   Optional start ISO timestamp.
 	 * @param string|null $end_iso     Optional end ISO timestamp.
+	 * @param int         $per_page    Number of results per page (default 100).
+	 * @param int         $page        1-indexed page number (default 1).
 	 * @return array<int,array<string,mixed>>|WP_Error
 	 */
-	public static function list_for_calendar( int $calendar_id, ?string $start_iso = null, ?string $end_iso = null ) {
+	public static function list_for_calendar( int $calendar_id, ?string $start_iso = null, ?string $end_iso = null, int $per_page = 100, int $page = 1 ) {
 		global $wpdb;
 
 		$table_name = HBE_Bookings_Table::get_name();
+		$per_page   = max( 1, $per_page );
+		$offset     = max( 0, ( $page - 1 ) * $per_page );
+		$columns    = self::COLUMNS;
 
 		if ( null !== $start_iso && null !== $end_iso ) {
 			$start_datetime = self::parse_request_datetime( $start_iso );
@@ -41,20 +51,24 @@ class HBE_Bookings {
 
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT * FROM %i WHERE calendar_id = %d AND start_datetime < %s AND end_datetime > %s ORDER BY start_datetime ASC',
+					"SELECT {$columns} FROM %i WHERE calendar_id = %d AND start_datetime < %s AND end_datetime > %s ORDER BY start_datetime ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					$table_name,
 					$calendar_id,
 					$end_datetime,
-					$start_datetime
+					$start_datetime,
+					$per_page,
+					$offset
 				),
 				ARRAY_A
 			);
 		} else {
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT * FROM %i WHERE calendar_id = %d ORDER BY start_datetime ASC',
+					"SELECT {$columns} FROM %i WHERE calendar_id = %d ORDER BY start_datetime ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					$table_name,
-					$calendar_id
+					$calendar_id,
+					$per_page,
+					$offset
 				),
 				ARRAY_A
 			);
@@ -123,7 +137,7 @@ class HBE_Bookings {
 
 		if ( false === $inserted ) {
 			// Detect duplicate-key violation from the composite unique index
-			// (calendar_id, start_datetime, end_datetime, status) as a DB-level
+			// (calendar_id, start_datetime, end_datetime) as a DB-level
 			// safeguard against race conditions.
 			$last_error = $wpdb->last_error ?? '';
 			if (
@@ -326,24 +340,25 @@ class HBE_Bookings {
 		global $wpdb;
 
 		$table_name = HBE_Bookings_Table::get_name();
+		$columns    = self::COLUMNS;
 
 		if ( $calendar_id > 0 ) {
 			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT * FROM {$table_name} WHERE id = %d AND calendar_id = %d LIMIT 1",
+					"SELECT {$columns} FROM {$table_name} WHERE id = %d AND calendar_id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					$booking_id,
 					$calendar_id
 				),
 				ARRAY_A
-			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		} else {
 			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT * FROM {$table_name} WHERE id = %d LIMIT 1",
+					"SELECT {$columns} FROM {$table_name} WHERE id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					$booking_id
 				),
 				ARRAY_A
-			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 
 		return is_array( $row ) ? $row : null;
@@ -463,34 +478,27 @@ class HBE_Bookings {
 
 		if ( $exclude_booking > 0 ) {
 			$count = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$table_name}
-					WHERE calendar_id = %d
-					AND status != %s
-					AND id != %d
-					AND start_datetime < %s
-					AND end_datetime > %s",
+				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					'SELECT COUNT(*) FROM %i WHERE calendar_id = %d AND status != %s AND id != %d AND start_datetime < %s AND end_datetime > %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
 					$calendar_id,
 					'cancelled',
 					$exclude_booking,
 					$end_datetime,
 					$start_datetime
 				)
-			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			);
 		} else {
 			$count = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$table_name}
-					WHERE calendar_id = %d
-					AND status != %s
-					AND start_datetime < %s
-					AND end_datetime > %s",
+				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					'SELECT COUNT(*) FROM %i WHERE calendar_id = %d AND status != %s AND start_datetime < %s AND end_datetime > %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
 					$calendar_id,
 					'cancelled',
 					$end_datetime,
 					$start_datetime
 				)
-			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			);
 		}
 
 		return (int) $count > 0;

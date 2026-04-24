@@ -1,3 +1,9 @@
+:root {
+	--hbe-primary: var(--ant-color-primary, #1677ff);
+	--hbe-surface: var(--hbe-calendar-bg, #ffffff);
+	--hbe-text: var(--hbe-calendar-text, #1f2937);
+}
+
 /* ── WP style reset ─────────────────────────────────────────────── */
 #h-bricks-admin-root {
 	font-family:

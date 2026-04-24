@@ -21,12 +21,16 @@ import {
 } from "../settings/src/EmailDesigner";
 import { getAntdLocale, tr } from "../settings/src/i18n";
 import "../settings/src/SettingsApp.css";
+import {
+	DARK_THEME_COMPONENTS,
+	DARK_THEME_TOKENS,
+	DEFAULT_PRIMARY_COLOR,
+} from "../settings/src/shared/constants";
 
 // ─── Theme infrastructure (mirrors SettingsApp.tsx) ────────────────────────
 
 const THEME_STORAGE_KEY = "wp-react-ui-theme";
 const THEME_CHANGE_EVENT = "wp-react-ui-theme-change";
-const DEFAULT_PRIMARY_COLOR = "#1677ff";
 const EMAIL_DESIGNER_ROOT_ID = "h-bricks-email-designer-root";
 
 type AdminTheme = "light" | "dark";
@@ -108,7 +112,9 @@ function readCssVariableValue(
 	return null;
 }
 
-function isUsablePrimaryColor(value: string | null | undefined): value is string {
+function isUsablePrimaryColor(
+	value: string | null | undefined,
+): value is string {
 	if (!value) return false;
 	const normalized = value.replace(/\s+/g, " ").trim().toLowerCase();
 	const unusable = new Set([
@@ -392,6 +398,8 @@ function EmailDesignerShell() {
 					padding: "0 24px",
 					height: 64,
 					flexShrink: 0,
+					borderBottom: `1px solid ${token.colorBorderSecondary ?? token.colorBorder}`,
+					background: token.colorBgContainer,
 				}}
 			>
 				<Flex
@@ -400,11 +408,11 @@ function EmailDesignerShell() {
 					gap={12}
 					style={{ height: "100%" }}
 				>
-					<Flex align="center" gap={10} style={{ minWidth: 0 }}>
+					<Flex align="center" gap={12} style={{ minWidth: 0 }}>
 						<div
 							style={{
-								width: 32,
-								height: 32,
+								width: 36,
+								height: 36,
 								borderRadius: 10,
 								background: token.colorPrimary,
 								display: "flex",
@@ -412,6 +420,7 @@ function EmailDesignerShell() {
 								justifyContent: "center",
 								color: "#fff",
 								flexShrink: 0,
+								fontSize: 16,
 							}}
 						>
 							<MailOutlined />
@@ -420,14 +429,14 @@ function EmailDesignerShell() {
 							<Typography.Text
 								strong
 								ellipsis
-								style={{ fontSize: 14, lineHeight: 1.2 }}
+								style={{ fontSize: 15, lineHeight: 1.3 }}
 							>
 								{tr("Email Designer")}
 							</Typography.Text>
 							<Typography.Text
 								type="secondary"
 								ellipsis
-								style={{ fontSize: 12, lineHeight: 1.2 }}
+								style={{ fontSize: 12, lineHeight: 1.3 }}
 							>
 								{tr(
 									"Design the booking confirmation email shared by all calendars.",
@@ -436,7 +445,7 @@ function EmailDesignerShell() {
 						</Flex>
 					</Flex>
 
-					<Flex align="center" gap={12} style={{ flexShrink: 0 }}>
+					<Flex align="center" gap={16} style={{ flexShrink: 0 }}>
 						<Typography.Text
 							type={dirty ? "warning" : "secondary"}
 							style={{ whiteSpace: "nowrap", fontSize: 13 }}
@@ -449,6 +458,8 @@ function EmailDesignerShell() {
 							loading={saving}
 							disabled={!dirty || loading}
 							onClick={() => void handleSave()}
+							size="middle"
+							style={{ fontWeight: 600 }}
 						>
 							{tr("Save Template")}
 						</Button>
@@ -471,17 +482,18 @@ function EmailDesignerShell() {
 						message={error}
 						closable
 						onClose={() => setError("")}
-						style={{ marginBottom: 12 }}
+						style={{ marginBottom: 16 }}
 					/>
 				) : null}
 
 				<div
 					style={{
 						background: token.colorBgContainer,
-						border: "1px solid var(--hbe-chrome-border)",
-						borderRadius: 12,
-						padding: 20,
+						border: `1px solid ${token.colorBorderSecondary ?? token.colorBorder}`,
+						borderRadius: token.borderRadiusLG,
+						padding: 24,
 						minHeight: 560,
+						boxShadow: token.boxShadowTertiary,
 					}}
 				>
 					{loading || !template ? (
@@ -556,29 +568,10 @@ function EmailDesignerApp() {
 					token: {
 						colorPrimary: primaryColor,
 						borderRadius: 8,
-						...(themeMode === "dark" && {
-							colorBgContainer: "#131c2b",
-							colorBgElevated: "#192437",
-							colorBgLayout: "#0f1723",
-							colorFillAlter: "#1a2435",
-							colorFillSecondary: "#1e2a3b",
-							colorBorderSecondary: "rgba(255,255,255,0.09)",
-							colorBorder: "rgba(255,255,255,0.12)",
-						}),
+						...(themeMode === "dark" ? DARK_THEME_TOKENS : {}),
 					},
 					components: {
-						...(themeMode === "dark" && {
-							Button: {
-								defaultBg: "rgba(255,255,255,0.06)",
-								defaultBorderColor: "rgba(255,255,255,0.18)",
-								defaultColor: "#e2e8f0",
-								defaultHoverBg: "rgba(255,255,255,0.10)",
-								defaultHoverBorderColor: "rgba(255,255,255,0.28)",
-								defaultHoverColor: "#f8fafc",
-								defaultActiveBg: "rgba(255,255,255,0.13)",
-								defaultActiveBorderColor: "rgba(255,255,255,0.32)",
-							},
-						}),
+						...(themeMode === "dark" ? DARK_THEME_COMPONENTS : {}),
 					},
 				}}
 			>

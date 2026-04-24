@@ -413,16 +413,25 @@ class HBE_Calendar_Settings {
 	 * @return string
 	 */
 	private static function sanitize_compiled_html( string $html ): string {
-		// Remove <script>...</script> blocks (case-insensitive).
-		$html = preg_replace( '/<script\b[^>]*>.*?<\/script>/is', '', $html );
-		// Remove any remaining standalone <script ...> tags without closing.
-		$html = preg_replace( '/<script\b[^>]*\/?>/i', '', $html );
+		// Normalize entities so encoded bypasses (e.g. &#106;avascript:) are caught.
+		$html = html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
-		// Remove on* event handler attributes (onclick, onload, onerror, etc.).
-		$html = preg_replace( '/\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html );
+		$previous = '';
+		while ( $previous !== $html ) {
+			$previous = $html;
 
-		// Remove javascript: URIs in href/src/action attributes.
-		$html = preg_replace( '/\b(href|src|action|formaction|data)\s*=\s*(?:"\s*javascript:[^"]*"|\'\s*javascript:[^\']*\'|javascript:[^\s>]*)/i', '$1=""', $html );
+			// Remove <script>...</script> blocks (case-insensitive).
+			$html = preg_replace( '/<script\b[^>]*>.*?<\/script>/is', '', $html );
+			// Remove any remaining standalone <script ...> tags without closing.
+			$html = preg_replace( '/<script\b[^>]*\/?>/i', '', $html );
+
+			// Remove on* event handler attributes (onclick, onload, onerror, etc.).
+			// Covers leading whitespace OR start-of-tag boundary.
+			$html = preg_replace( '/(?:\s+|^<[^>]*)on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html );
+
+			// Remove javascript: URIs in href/src/action attributes.
+			$html = preg_replace( '/\b(href|src|action|formaction|data)\s*=\s*(?:"\s*javascript:[^"]*"|\'\s*javascript:[^\']*\'|javascript:[^\s>]*)/i', '$1=""', $html );
+		}
 
 		return $html;
 	}
@@ -567,6 +576,11 @@ class HBE_Calendar_Settings {
 		$date_string = trim( $date_string );
 
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date_string ) ) {
+			return null;
+		}
+
+		list( $year, $month, $day ) = explode( '-', $date_string );
+		if ( ! checkdate( (int) $month, (int) $day, (int) $year ) ) {
 			return null;
 		}
 

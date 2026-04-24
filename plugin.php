@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'HBE_PLUGIN_FILE', __FILE__ );
 define( 'HBE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'HBE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'HBE_VERSION', '0.0.0' );
+define( 'HBE_VERSION', '0.0.1' );
 
 require_once HBE_PLUGIN_DIR . 'includes/class-hbe-calendar-post-type.php';
 require_once HBE_PLUGIN_DIR . 'includes/class-hbe-booking-mail.php';

@@ -2017,6 +2017,12 @@
 		padding-right: 0;
 	}
 
+	:root {
+		--hbe-primary: var(--bricks-color-primary, #fdd34d);
+		--hbe-surface: var(--bricks-bg-light, #f6f6f6);
+		--hbe-text: var(--bricks-text-dark, #2d2f2f);
+	}
+
 	.hbe-booking {
 		--hbe-booking-panel-min-height: min(40rem, 86vh);
 	}

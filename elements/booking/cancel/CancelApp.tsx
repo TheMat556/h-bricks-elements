@@ -20,10 +20,33 @@ interface CancelData {
 	siteName: string;
 }
 
+type AdminTheme = "light" | "dark";
+
+interface HBricksWindow {
+	hbeCancelData?: CancelData;
+	hBricksAdmin?: {
+		theme?: AdminTheme;
+	};
+}
+
 declare global {
-	interface Window {
-		hbeCancelData?: CancelData;
-	}
+	interface Window extends HBricksWindow {}
+}
+
+function getCancelPrimaryColor(): string {
+	if (typeof document === "undefined") return "#1677ff";
+	return (
+		getComputedStyle(document.documentElement)
+			.getPropertyValue("--hbe-primary")
+			.trim() || "#1677ff"
+	);
+}
+
+function getCancelTheme(): AdminTheme {
+	const serverTheme = window.hBricksAdmin?.theme;
+	return serverTheme === "dark" || serverTheme === "light"
+		? serverTheme
+		: "light";
 }
 
 function Logo({ url, siteName }: { url: string; siteName: string }) {
@@ -143,9 +166,21 @@ export function mountCancelApp(el: HTMLElement): void {
 		siteName: "",
 	};
 
+	const themeMode = getCancelTheme();
+	const algorithm =
+		themeMode === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm;
+
 	const root = createRoot(el);
 	root.render(
-		<ConfigProvider theme={{ cssVar: true }}>
+		<ConfigProvider
+			theme={{
+				cssVar: true,
+				algorithm,
+				token: {
+					colorPrimary: getCancelPrimaryColor(),
+				},
+			}}
+		>
 			<CancelApp data={data} />
 		</ConfigProvider>,
 	);
