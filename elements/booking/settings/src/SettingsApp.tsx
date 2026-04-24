@@ -42,12 +42,17 @@ import {
 import { getAntdLocale, getDayjsLocale, tr } from "./i18n";
 import "./SettingsApp.css";
 
+import {
+	ADMIN_MODAL_Z_INDEX,
+	DARK_THEME_COMPONENTS,
+	DARK_THEME_TOKENS,
+	DEFAULT_PRIMARY_COLOR,
+} from "./shared/constants";
+
 const { useBreakpoint } = Grid;
 const THEME_STORAGE_KEY = "wp-react-ui-theme";
 const THEME_CHANGE_EVENT = "wp-react-ui-theme-change";
-const ADMIN_MODAL_Z_INDEX = 100010;
 const SHELL_MODAL_OVERLAY_ID = "hbe-settings-shell-modal-overlay";
-const DEFAULT_PRIMARY_COLOR = "#1677ff";
 
 type AdminTheme = "light" | "dark";
 type AdminViewKey = "booking" | "settings";
@@ -828,6 +833,7 @@ function App() {
 	const [calendarLoadError, setCalendarLoadError] = useState("");
 	const [calendarSettings, setCalendarSettings] =
 		useState<CalendarSettings | null>(null);
+	const [calendarsLoaded, setCalendarsLoaded] = useState(false);
 	const [calendarTitleDraft, setCalendarTitleDraft] = useState("");
 	const [settingsLoading, setSettingsLoading] = useState(false);
 	const [settingsSaving, setSettingsSaving] = useState(false);
@@ -835,6 +841,8 @@ function App() {
 	const [deletingCalendar, setDeletingCalendar] = useState(false);
 	const [settingsError, setSettingsError] = useState("");
 	const [settingsDirty, setSettingsDirty] = useState(false);
+	const [displayedView, setDisplayedView] = useState<AdminViewKey>(activeKey);
+	const [viewTransitioning, setViewTransitioning] = useState(false);
 	const { token } = theme.useToken();
 	const hasCalendars = calendars.length > 0;
 	const displayCalendars = useMemo(
@@ -927,6 +935,11 @@ function App() {
 						? error.message
 						: tr("Calendars could not be loaded."),
 				);
+			})
+			.finally(() => {
+				if (isMounted) {
+					setCalendarsLoaded(true);
+				}
 			});
 
 		return () => {
@@ -1230,7 +1243,7 @@ function App() {
 		sidebarBackdrop.setAttribute("aria-label", tr("Close dialog"));
 		Object.assign(sidebarBackdrop.style, {
 			gridArea: "sidebar",
-			background: "rgba(0, 0, 0, 0.45)",
+			background: token.colorBgMask,
 			border: "0",
 			padding: "0",
 			margin: "0",
@@ -1245,7 +1258,7 @@ function App() {
 		navbarBackdrop.setAttribute("aria-label", tr("Close dialog"));
 		Object.assign(navbarBackdrop.style, {
 			gridArea: "navbar",
-			background: "rgba(0, 0, 0, 0.45)",
+			background: token.colorBgMask,
 			border: "0",
 			padding: "0",
 			margin: "0",
@@ -1262,7 +1275,21 @@ function App() {
 			navbarBackdrop.removeEventListener("click", handleCloseSettingsModal);
 			overlay.remove();
 		};
-	}, [handleCloseSettingsModal, isSettingsModalOpen]);
+	}, [handleCloseSettingsModal, isSettingsModalOpen, token.colorBgMask]);
+
+	useEffect(() => {
+		if (activeKey !== displayedView) {
+			setViewTransitioning(true);
+			const timer = setTimeout(() => {
+				setDisplayedView(activeKey);
+				// Keep transitioning true for a moment so the new view can render
+				requestAnimationFrame(() => {
+					setTimeout(() => setViewTransitioning(false), 50);
+				});
+			}, 180);
+			return () => clearTimeout(timer);
+		}
+	}, [activeKey, displayedView]);
 
 	const headerLabel = (() => {
 		if (!hasCalendars || !selectedCalendar) {
@@ -1525,50 +1552,77 @@ function App() {
 					</div>
 
 					<div
-						className={
-							activeKey === "booking"
-								? "hbe-settings-booking-workspace"
-								: undefined
-						}
 						style={{
-							background: token.colorBgLayout,
-							overflow: activeKey === "booking" ? "hidden" : "auto",
-							display: "flex",
-							flexDirection: "column",
+							position: "relative",
 							flex: 1,
 							minHeight: 0,
-							padding: 0,
+							display: "flex",
+							flexDirection: "column",
+							overflow: "hidden",
 						}}
 					>
-						{activeKey === "booking" && hasCalendars && (
-							<BookingView
-								calendarId={selectedCalendarId}
-								allowDoubleBookings={Boolean(
-									calendarSettings?.allowDoubleBookings,
+						{viewTransitioning && (
+							<div className="hbe-settings-loading-bar">
+								<div style={{ background: token.colorPrimary }} />
+							</div>
+						)}
+						<div
+							className={
+								displayedView === "booking"
+									? "hbe-settings-booking-workspace"
+									: undefined
+							}
+							style={{
+								background: token.colorBgLayout,
+								overflow: displayedView === "booking" ? "hidden" : "auto",
+								display: "flex",
+								flexDirection: "column",
+								flex: 1,
+								minHeight: 0,
+								padding: 0,
+								pointerEvents: viewTransitioning ? "none" : "auto",
+							}}
+						>
+							{displayedView === "booking" && hasCalendars && (
+								<BookingView
+									calendarId={selectedCalendarId}
+									allowDoubleBookings={Boolean(
+										calendarSettings?.allowDoubleBookings,
+									)}
+									rightPanelVisible={isSmall ? false : rightPanelVisible}
+									selectedDate={calendarDate}
+									view={view}
+									use24h={use24h}
+									onViewChange={setView}
+									onNavigate={setCalendarDate}
+								/>
+							)}
+
+							{displayedView === "booking" &&
+								!hasCalendars &&
+								calendarsLoaded && (
+									<EmptyCalendarState
+										title={tr("No calendar created")}
+										description={
+											calendarLoadError ||
+											tr(
+												"Create your first calendar to unlock the booking view, date navigation and calendar-related controls.",
+											)
+										}
+									/>
 								)}
-								rightPanelVisible={isSmall ? false : rightPanelVisible}
-								selectedDate={calendarDate}
-								view={view}
-								use24h={use24h}
-								onViewChange={setView}
-								onNavigate={setCalendarDate}
-							/>
-						)}
 
-						{activeKey === "booking" && !hasCalendars && (
-							<EmptyCalendarState
-								title={tr("No calendar created")}
-								description={
-									calendarLoadError ||
-									tr(
-										"Create your first calendar to unlock the booking view, date navigation and calendar-related controls.",
-									)
-								}
-							/>
-						)}
+							{displayedView === "booking" &&
+								!hasCalendars &&
+								!calendarsLoaded && (
+									<div style={{ position: "relative", flex: 1 }}>
+										<div className="hbe-settings-loading-bar">
+											<div style={{ background: token.colorPrimary }} />
+										</div>
+									</div>
+								)}
 
-						{activeKey === "settings" &&
-							(hasCalendars ? (
+							{displayedView === "settings" && hasCalendars && (
 								<CalendarSettingsPanel
 									calendarId={selectedCalendarId}
 									calendarName={
@@ -1582,20 +1636,39 @@ function App() {
 									error={settingsError}
 									restUrl={getAdminApiConfig().restUrl}
 									restNonce={getAdminApiConfig().restNonce}
-									onCalendarNameChange={handleCalendarTitleChange}
-									onChange={handleSettingsChange}
+									settingsError={settingsError}
+									onSettingsChange={handleSettingsChange}
+									onCalendarTitleChange={handleCalendarTitleChange}
+									onSave={handleSaveSettings}
+									saving={settingsSaving}
+									onSave={handleSaveSettings}
 								/>
-							) : (
-								<EmptyCalendarState
-									title={tr("No calendar created")}
-									description={
-										calendarLoadError ||
-										tr(
-											"Create a calendar first. Until then, all calendar-related controls stay disabled.",
-										)
-									}
-								/>
-							))}
+							)}
+
+							{displayedView === "settings" &&
+								!hasCalendars &&
+								calendarsLoaded && (
+									<EmptyCalendarState
+										title={tr("No calendar created")}
+										description={
+											calendarLoadError ||
+											tr(
+												"Create your first calendar to unlock settings and configuration options.",
+											)
+										}
+									/>
+								)}
+
+							{displayedView === "settings" &&
+								!hasCalendars &&
+								!calendarsLoaded && (
+									<div style={{ position: "relative", flex: 1 }}>
+										<div className="hbe-settings-loading-bar">
+											<div style={{ background: token.colorPrimary }} />
+										</div>
+									</div>
+								)}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1607,7 +1680,7 @@ function App() {
 					style={{
 						position: "fixed",
 						inset: 0,
-						background: "rgba(0, 0, 0, 0.45)",
+						background: token.colorBgMask,
 						zIndex: ADMIN_MODAL_Z_INDEX - 1,
 					}}
 				/>
@@ -1736,29 +1809,10 @@ export function SettingsApp() {
 					token: {
 						colorPrimary: primaryColor,
 						borderRadius: 8,
-						...(themeMode === "dark" && {
-							colorBgContainer: "#131c2b",
-							colorBgElevated: "#192437",
-							colorBgLayout: "#0f1723",
-							colorFillAlter: "#1a2435",
-							colorFillSecondary: "#1e2a3b",
-							colorBorderSecondary: "rgba(255,255,255,0.09)",
-							colorBorder: "rgba(255,255,255,0.12)",
-						}),
+						...(themeMode === "dark" ? DARK_THEME_TOKENS : {}),
 					},
 					components: {
-						...(themeMode === "dark" && {
-							Button: {
-								defaultBg: "rgba(255,255,255,0.06)",
-								defaultBorderColor: "rgba(255,255,255,0.18)",
-								defaultColor: "#e2e8f0",
-								defaultHoverBg: "rgba(255,255,255,0.10)",
-								defaultHoverBorderColor: "rgba(255,255,255,0.28)",
-								defaultHoverColor: "#f8fafc",
-								defaultActiveBg: "rgba(255,255,255,0.13)",
-								defaultActiveBorderColor: "rgba(255,255,255,0.32)",
-							},
-						}),
+						...(themeMode === "dark" ? DARK_THEME_COMPONENTS : {}),
 					},
 				}}
 			>
