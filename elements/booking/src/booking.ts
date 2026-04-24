@@ -1,4 +1,10 @@
 import "./booking.css";
+import { ensureBookingsLoaded } from "./api";
+import {
+	getInitialServiceSelection,
+	isDateAvailable,
+	parseDateKey,
+} from "./slots";
 // calendar formatters imported via ui/calendar
 import {
 	applyResponsiveLayoutMode,
@@ -11,8 +17,6 @@ import {
 	syncBookingLayoutState,
 } from "./state";
 import type { BookingState, PublicCalendar } from "./types";
-import { getInitialServiceSelection, isDateAvailable, parseDateKey } from "./slots";
-import { ensureBookingsLoaded } from "./api";
 import {
 	goToStepperPanel,
 	mountCalendar,

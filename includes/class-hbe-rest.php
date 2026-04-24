@@ -795,11 +795,13 @@ class HBE_REST {
 		}
 
 		// Rate limit: 5 requests per IP per calendar per 10 minutes.
-		$ip       = self::get_client_ip();
-		$rate_key = 'hbe_rl_' . wp_hash( $ip . '_' . (int) $calendar->ID );
-		$attempts = (int) get_transient( $rate_key );
+		$ip              = self::get_client_ip();
+		$rate_key        = 'hbe_rl_' . wp_hash( $ip . '_' . (int) $calendar->ID );
+		$global_rate_key = 'hbe_rl_' . wp_hash( $ip );
+		$attempts        = (int) get_transient( $rate_key );
+		$global_attempts = (int) get_transient( $global_rate_key );
 
-		if ( $attempts >= 5 ) {
+		if ( $attempts >= 5 || $global_attempts >= 5 ) {
 			header( 'Retry-After: 600' );
 			return new WP_Error(
 				'hbe_rate_limit',
@@ -807,6 +809,10 @@ class HBE_REST {
 				array( 'status' => 429 )
 			);
 		}
+
+		// Increment rate counter before validation to penalize invalid requests.
+		set_transient( $rate_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
+		set_transient( $global_rate_key, $global_attempts + 1, 10 * MINUTE_IN_SECONDS );
 
 		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
 
@@ -827,9 +833,6 @@ class HBE_REST {
 		if ( is_wp_error( $booking ) ) {
 			return $booking;
 		}
-
-		// Increment rate counter only after a successful booking.
-		set_transient( $rate_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
 
 		HBE_Plugin::send_booking_confirmation( (int) $calendar->ID, $booking );
 
@@ -857,12 +860,15 @@ class HBE_REST {
 			return true;
 		}
 
-		try {
-			new DateTime( $value );
+		// Strict ISO 8601 checks to reject phrases like "now" or "yesterday".
+		if ( false !== DateTime::createFromFormat( 'Y-m-d\TH:i:s.uP', $value ) ) {
 			return true;
-		} catch ( Exception $e ) {
-			return new WP_Error( 'invalid_date', 'Date must be in Y-m-d or ISO 8601 format.', array( 'status' => 400 ) );
 		}
+		if ( false !== DateTime::createFromFormat( 'Y-m-d\TH:i:sP', $value ) ) {
+			return true;
+		}
+
+		return new WP_Error( 'invalid_date', 'Date must be in Y-m-d or ISO 8601 format.', array( 'status' => 400 ) );
 	}
 
 	/**

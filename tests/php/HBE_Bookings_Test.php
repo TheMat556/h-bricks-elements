@@ -444,6 +444,66 @@ class HBE_Bookings_Test extends TestCase {
 		$this->assertSame( 'hbe_booking_update_failed', $result->get_error_code() );
 	}
 
+	public function test_update_race_condition_duplicate_entry(): void {
+		$this->wpdb->mock_get_row = array( $this->get_booking_row( 456 ) );
+		$this->wpdb->mock_get_var = array( '*' => 0 );
+		$this->wpdb->mock_update  = false;
+		$this->wpdb->last_error   = "Duplicate entry '1-2026-04-25 10:00:00-2026-04-25 11:00:00' for key 'unique_booking_slot'";
+
+		$result = HBE_Bookings::update(
+			1,
+			456,
+			array(
+				'start' => '2026-04-25 10:00:00',
+				'end'   => '2026-04-25 11:00:00',
+			)
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'booking_conflict', $result->get_error_code() );
+	}
+
+	// ================================================================
+	// CANCEL
+	// ================================================================
+
+	public function test_cancel_success(): void {
+		$this->wpdb->mock_get_row = array( $this->get_booking_row( 789 ) );
+		$this->wpdb->mock_update  = 1;
+
+		$result = HBE_Bookings::cancel( 1, 789 );
+
+		$this->assertTrue( $result );
+		$updates = array_filter(
+			$this->wpdb->captured,
+			function ( $c ) {
+				return 'update' === $c['method'];
+			}
+		);
+		$this->assertNotEmpty( $updates );
+		$update = array_values( $updates )[0];
+		$this->assertSame( 'cancelled', $update['data']['status'] );
+	}
+
+	public function test_cancel_not_found(): void {
+		$this->wpdb->mock_get_row = array( null );
+
+		$result = HBE_Bookings::cancel( 1, 999 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'hbe_booking_not_found', $result->get_error_code() );
+	}
+
+	public function test_cancel_update_failure(): void {
+		$this->wpdb->mock_get_row = array( $this->get_booking_row( 789 ) );
+		$this->wpdb->mock_update  = false;
+
+		$result = HBE_Bookings::cancel( 1, 789 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'hbe_booking_cancel_failed', $result->get_error_code() );
+	}
+
 	// ================================================================
 	// HAS_CONFLICT (private — accessed via Reflection)
 	// ================================================================
@@ -563,6 +623,18 @@ class HBE_Bookings_Test extends TestCase {
 		// Today at midnight + 2 days should be exactly at the boundary.
 		$two_days_midnight = gmdate( 'Y-m-d', strtotime( '+2 days' ) ) . ' 00:00:00';
 		$result            = $method->invoke( null, $two_days_midnight, $settings );
+
+		$this->assertTrue( $result );
+	}
+
+	public function test_is_within_booking_window_end_of_day(): void {
+		$method = new ReflectionMethod( HBE_Bookings::class, 'is_within_booking_window' );
+		$method->setAccessible( true );
+
+		$settings = array( 'slotSettings' => array( 'maxAdvanceDays' => 2 ) );
+		// End of day 2 should still be allowed (23:59:59 boundary).
+		$two_days_end = gmdate( 'Y-m-d', strtotime( '+2 days' ) ) . ' 23:59:59';
+		$result       = $method->invoke( null, $two_days_end, $settings );
 
 		$this->assertTrue( $result );
 	}

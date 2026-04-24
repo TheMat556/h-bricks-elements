@@ -2,7 +2,7 @@
 /**
  * Plugin Name: H-Bricks-Elements
  * Description: Module that adds some custom Bricks Builder Elements
- * Version: 0.0.0
+ * Version: 0.0.1
  * Author: Matthias Hader
  * Text Domain: h-bricks-elements
  *

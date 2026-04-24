@@ -1641,7 +1641,6 @@ function App() {
 									onCalendarTitleChange={handleCalendarTitleChange}
 									onSave={handleSaveSettings}
 									saving={settingsSaving}
-									onSave={handleSaveSettings}
 								/>
 							)}
 

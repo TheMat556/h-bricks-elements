@@ -281,7 +281,7 @@ class HBE_Plugin {
 				self::render_cancel_page( 'error', __( 'Invalid security token. Please refresh the page and try again.', 'h-bricks-elements' ) );
 				exit;
 			}
-			$result = HBE_Bookings::delete( $calendar_id, $booking_id );
+			$result = HBE_Bookings::cancel( $calendar_id, $booking_id );
 
 			if ( is_wp_error( $result ) ) {
 				self::render_cancel_page( 'error', $result->get_error_message() );
@@ -310,10 +310,10 @@ class HBE_Plugin {
 		$logo_url  = self::get_site_logo_url();
 		$home_url  = home_url( '/' );
 
-		$action     = '';
-		$nonce_html = '';
+		$action = '';
+		$nonce  = '';
 		if ( 'confirm' === $state && $booking_id && $calendar_id ) {
-			$action     = add_query_arg(
+			$action = add_query_arg(
 				array(
 					'hbe_cancel_booking' => '1',
 					'id'                 => $booking_id,
@@ -322,7 +322,7 @@ class HBE_Plugin {
 				),
 				home_url( '/' )
 			);
-			$nonce_html = wp_nonce_field( 'hbe_cancel_' . $booking_id . '_' . $calendar_id, '_wpnonce', true, false );
+			$nonce  = wp_create_nonce( 'hbe_cancel_' . $booking_id . '_' . $calendar_id );
 		}
 
 		$heading_map = array(
@@ -333,13 +333,13 @@ class HBE_Plugin {
 		$heading     = $heading_map[ $state ] ?? $heading_map['error'];
 
 		$data = array(
-			'state'      => $state,
-			'message'    => $message,
-			'action'     => $action,
-			'nonceField' => $nonce_html,
-			'homeUrl'    => $home_url,
-			'logoUrl'    => $logo_url,
-			'siteName'   => $site_name,
+			'state'    => $state,
+			'message'  => $message,
+			'action'   => $action,
+			'nonce'    => $nonce,
+			'homeUrl'  => $home_url,
+			'logoUrl'  => $logo_url,
+			'siteName' => $site_name,
 		);
 
 		$plugin_root_url  = plugin_dir_url( HBE_PLUGIN_FILE );

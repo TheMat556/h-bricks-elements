@@ -246,7 +246,14 @@ class HBE_Calendar_Settings {
 			}
 		}
 
-		return HBE_Booking_Mail::validate_template_payload( $template );
+		$mail_enabled = ! empty( $mail_settings['enabled'] );
+		$compiled_html = isset( $template['compiledHtml'] ) ? trim( (string) $template['compiledHtml'] ) : '';
+
+		if ( $mail_enabled && '' !== $compiled_html ) {
+			return HBE_Booking_Mail::validate_template_payload( $template );
+		}
+
+		return null;
 	}
 
 	/**
@@ -407,33 +414,84 @@ class HBE_Calendar_Settings {
 	/**
 	 * Strips dangerous content from compiled email HTML.
 	 *
-	 * Removes <script> tags, on* event handlers, and javascript: URIs.
+	 * Uses wp_kses with a curated whitelist of email-safe tags and attributes.
 	 *
 	 * @param string $html Raw compiled HTML.
 	 * @return string
 	 */
 	private static function sanitize_compiled_html( string $html ): string {
-		// Normalize entities so encoded bypasses (e.g. &#106;avascript:) are caught.
-		$html = html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$allowed_html = array(
+			'a'          => array(
+				'href'   => true,
+				'target' => true,
+				'rel'    => true,
+				'style'  => true,
+			),
+			'b'          => array(),
+			'body'       => array( 'style' => true ),
+			'br'         => array(),
+			'center'     => array(),
+			'code'       => array(),
+			'div'        => array( 'style' => true, 'align' => true ),
+			'em'         => array(),
+			'font'       => array( 'color' => true, 'face' => true, 'size' => true ),
+			'h1'         => array( 'style' => true ),
+			'h2'         => array( 'style' => true ),
+			'h3'         => array( 'style' => true ),
+			'h4'         => array( 'style' => true ),
+			'head'       => array(),
+			'hr'         => array( 'style' => true ),
+			'html'       => array(),
+			'i'          => array(),
+			'img'        => array(
+				'src'    => true,
+				'alt'    => true,
+				'width'  => true,
+				'height' => true,
+				'style'  => true,
+			),
+			'li'         => array( 'style' => true ),
+			'meta'       => array( 'charset' => true ),
+			'ol'         => array( 'style' => true ),
+			'p'          => array( 'style' => true ),
+			'pre'        => array(),
+			's'          => array(),
+			'span'       => array( 'style' => true ),
+			'strong'     => array(),
+			'style'      => array(),
+			'table'      => array(
+				'style'       => true,
+				'width'       => true,
+				'border'      => true,
+				'cellpadding' => true,
+				'cellspacing' => true,
+			),
+			'tbody'      => array(),
+			'td'         => array(
+				'style'   => true,
+				'colspan' => true,
+				'rowspan' => true,
+				'width'   => true,
+				'align'   => true,
+				'valign'  => true,
+			),
+			'tfoot'      => array(),
+			'th'         => array(
+				'style'   => true,
+				'colspan' => true,
+				'rowspan' => true,
+				'width'   => true,
+				'align'   => true,
+				'valign'  => true,
+			),
+			'thead'      => array(),
+			'title'      => array(),
+			'tr'         => array( 'style' => true ),
+			'u'          => array(),
+			'ul'         => array( 'style' => true ),
+		);
 
-		$previous = '';
-		while ( $previous !== $html ) {
-			$previous = $html;
-
-			// Remove <script>...</script> blocks (case-insensitive).
-			$html = preg_replace( '/<script\b[^>]*>.*?<\/script>/is', '', $html );
-			// Remove any remaining standalone <script ...> tags without closing.
-			$html = preg_replace( '/<script\b[^>]*\/?>/i', '', $html );
-
-			// Remove on* event handler attributes (onclick, onload, onerror, etc.).
-			// Covers leading whitespace OR start-of-tag boundary.
-			$html = preg_replace( '/(?:\s+|^<[^>]*)on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html );
-
-			// Remove javascript: URIs in href/src/action attributes.
-			$html = preg_replace( '/\b(href|src|action|formaction|data)\s*=\s*(?:"\s*javascript:[^"]*"|\'\s*javascript:[^\']*\'|javascript:[^\s>]*)/i', '$1=""', $html );
-		}
-
-		return $html;
+		return wp_kses( $html, $allowed_html );
 	}
 
 	/**

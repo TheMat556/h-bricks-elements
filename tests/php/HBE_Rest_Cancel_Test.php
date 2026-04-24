@@ -52,9 +52,9 @@ final class HBE_Rest_Cancel_Test extends TestCase {
 	}
 
 	/**
-	 * Valid token + valid POST nonce should delete the booking and render the success state.
+	 * Valid token + valid POST nonce should cancel the booking and render the success state.
 	 */
-	public function test_handle_cancel_page_with_valid_token_and_nonce_deletes_booking(): void {
+	public function test_handle_cancel_page_with_valid_token_and_nonce_cancels_booking(): void {
 		$token = HBE_Plugin::generate_cancel_token( $this->booking_id, $this->calendar_id );
 		$nonce = wp_create_nonce( 'hbe_cancel_' . $this->booking_id . '_' . $this->calendar_id );
 
@@ -95,8 +95,8 @@ final class HBE_Rest_Cancel_Test extends TestCase {
 	}
 
 	/**
-	 * After a successful cancellation the booking no longer exists. Replaying the same
-	 * request should fail because HBE_Bookings::delete returns a WP_Error.
+	 * After a successful cancellation the booking still exists with status 'cancelled'.
+	 * Replaying the same request should succeed because cancel() is idempotent.
 	 */
 	public function test_handle_cancel_page_rejects_replayed_request_after_successful_cancel(): void {
 		$token = HBE_Plugin::generate_cancel_token( $this->booking_id, $this->calendar_id );
@@ -113,14 +113,13 @@ final class HBE_Rest_Cancel_Test extends TestCase {
 			'_wpnonce'           => $nonce,
 		);
 
-		// First request: booking still exists -> success page.
+		// First request: success page.
 		$first_output = $this->run_cancel_page_in_subprocess( $get, $post, 'POST', true );
 		self::assertStringContainsString( '"state":"success"', $first_output );
 
-		// Second request: booking already deleted -> error page.
-		$second_output = $this->run_cancel_page_in_subprocess( $get, $post, 'POST', false );
-		self::assertStringContainsString( '"state":"error"', $second_output );
-		self::assertStringContainsString( 'Booking not found.', $second_output );
+		// Second request: still success because cancel() is idempotent.
+		$second_output = $this->run_cancel_page_in_subprocess( $get, $post, 'POST', true );
+		self::assertStringContainsString( '"state":"success"', $second_output );
 	}
 
 	/**
@@ -136,7 +135,7 @@ final class HBE_Rest_Cancel_Test extends TestCase {
 		$bootstrap = __DIR__ . '/bootstrap.php';
 
 		// Stubs for WordPress helpers not defined in bootstrap but required by render_cancel_page.
-		// A wpdb mock that supplies get_row so HBE_Bookings::delete can locate the row.
+		// A wpdb mock that supplies get_row so HBE_Bookings::cancel can locate the row.
 		$mock_wpdb = <<<'MOCK'
 class MockWpdb {
 	public $prefix = 'wp_';
@@ -171,7 +170,7 @@ class MockWpdb {
 		);
 	}
 
-	public function delete( $table, $where, $where_format = null ) {
+	public function update( $table, $data, $where, $format = null, $where_format = null ) {
 		$this->rows_affected = 1;
 		return 1;
 	}

@@ -176,7 +176,7 @@ class HBE_Booking_Mail {
 
 		$per_calendar_template = isset( $mail['template'] ) && is_array( $mail['template'] ) ? $mail['template'] : array();
 		$global_template       = get_option( 'hbe_email_template', array() );
-		$template              = is_array( $global_template ) && ! empty( $global_template ) ? $global_template : $per_calendar_template;
+		$template              = ! empty( $per_calendar_template ) ? $per_calendar_template : $global_template;
 		$compiled_html = isset( $template['compiledHtml'] ) ? trim( (string) $template['compiledHtml'] ) : '';
 
 		$calendar_post = get_post( $calendar_id );
@@ -414,9 +414,8 @@ class HBE_Booking_Mail {
 		$time     = $start_ts ? wp_date( 'H:i', $start_ts ) . ( $end_ts ? ' – ' . wp_date( 'H:i', $end_ts ) : '' ) : '';
 		$service  = self::resolve_service_name( $settings, isset( $booking['serviceId'] ) ? (string) $booking['serviceId'] : '' );
 		$global_template  = get_option( 'hbe_email_template', array() );
-		$logo_source      = is_array( $global_template ) && ! empty( $global_template )
-			? $global_template
-			: ( isset( $settings['mailSettings']['template'] ) && is_array( $settings['mailSettings']['template'] ) ? $settings['mailSettings']['template'] : array() );
+		$per_calendar_logo_source = isset( $settings['mailSettings']['template'] ) && is_array( $settings['mailSettings']['template'] ) ? $settings['mailSettings']['template'] : array();
+		$logo_source      = ! empty( $per_calendar_logo_source ) ? $per_calendar_logo_source : $global_template;
 		$logo_url = self::resolve_email_logo_url( $logo_source );
 
 		if ( ! empty( $options['cancelUrl'] ) ) {

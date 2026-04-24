@@ -241,6 +241,18 @@ class HBE_Bookings {
 		);
 
 		if ( false === $updated ) {
+			$last_error = $wpdb->last_error ?? '';
+			if (
+				false !== strpos( $last_error, '1062' ) ||
+				false !== strpos( $last_error, 'Duplicate entry' )
+			) {
+				return new WP_Error(
+					'booking_conflict',
+					__( 'This timeslot is already booked.', 'h-bricks-elements' ),
+					array( 'status' => 409 )
+				);
+			}
+
 			return new WP_Error(
 				'hbe_booking_update_failed',
 				__( 'Booking could not be updated.', 'h-bricks-elements' ),
@@ -294,6 +306,48 @@ class HBE_Bookings {
 			return new WP_Error(
 				'hbe_booking_delete_failed',
 				__( 'Booking could not be deleted.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Cancels a booking by setting its status to 'cancelled'.
+	 *
+	 * @param int $calendar_id Calendar ID.
+	 * @param int $booking_id  Booking ID.
+	 * @return bool|WP_Error
+	 */
+	public static function cancel( int $calendar_id, int $booking_id ) {
+		global $wpdb;
+
+		$existing = self::get_raw( $booking_id, $calendar_id );
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'hbe_booking_not_found',
+				__( 'Booking not found.', 'h-bricks-elements' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$updated = $wpdb->update(
+			HBE_Bookings_Table::get_name(),
+			array( 'status' => 'cancelled' ),
+			array(
+				'id'          => $booking_id,
+				'calendar_id' => $calendar_id,
+			),
+			array( '%s' ),
+			array( '%d', '%d' )
+		);
+
+		if ( false === $updated ) {
+			return new WP_Error(
+				'hbe_booking_cancel_failed',
+				__( 'Booking could not be cancelled.', 'h-bricks-elements' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -527,7 +581,7 @@ class HBE_Bookings {
 		}
 
 		$today_timestamp        = strtotime( gmdate( 'Y-m-d 00:00:00' ) . ' UTC' );
-		$last_allowed_timestamp = strtotime( '+' . $max_advance_days . ' days', $today_timestamp );
+		$last_allowed_timestamp = strtotime( '+' . $max_advance_days . ' days 23:59:59', $today_timestamp );
 
 		if ( false === $today_timestamp || false === $last_allowed_timestamp ) {
 			return false;

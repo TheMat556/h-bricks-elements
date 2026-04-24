@@ -38,6 +38,7 @@ import type {
 	BookingState,
 	CalendarSettings,
 	PublicBooking,
+	PublicCalendar,
 } from "../../elements/booking/src/types";
 
 function makeDate(
@@ -484,11 +485,11 @@ describe("buildCalendarDays", () => {
 			(d) => d.date.getDate() === 10 && !d.isOutsideMonth,
 		);
 		expect(selectedDay).toBeDefined();
-		expect(selectedDay!.isSelected).toBe(true);
+		expect(selectedDay?.isSelected).toBe(true);
 		const otherDay = days.find(
 			(d) => d.date.getDate() === 11 && !d.isOutsideMonth,
 		);
-		expect(otherDay!.isSelected).toBe(false);
+		expect(otherDay?.isSelected).toBe(false);
 	});
 
 	it("marks days before today as unavailable", () => {
@@ -640,8 +641,8 @@ describe("toDateKey / parseDateKey", () => {
 		// JavaScript Date wraps months > 11
 		const parsed = parseDateKey("2024-13-01");
 		expect(parsed).not.toBeNull();
-		expect(parsed!.getFullYear()).toBe(2025);
-		expect(parsed!.getMonth()).toBe(0);
+		expect(parsed?.getFullYear()).toBe(2025);
+		expect(parsed?.getMonth()).toBe(0);
 	});
 });
 
@@ -686,13 +687,14 @@ describe("getInitialServiceSelection", () => {
 describe("getSelectedServiceLabel", () => {
 	it("returns joined labels for selected services", () => {
 		const base = baseBookingState();
+		const baseCalendar = base.calendar as PublicCalendar;
 		const state = baseBookingState({
 			firstColumnMode: "service",
 			selectedServiceIds: new Set(["svc1", "svc2"]),
 			calendar: {
-				...base.calendar!,
+				...baseCalendar,
 				settings: {
-					...base.calendar!.settings,
+					...baseCalendar.settings,
 					services: [
 						{ id: "svc1", name: "Service 1", publicLabel: "Public 1" },
 						{ id: "svc2", name: "Service 2" },
@@ -727,13 +729,14 @@ describe("getServiceDisplayLabel", () => {
 describe("getPrimaryServiceId", () => {
 	it("returns first active service id", () => {
 		const base = baseBookingState();
+		const baseCalendar = base.calendar as PublicCalendar;
 		const state = baseBookingState({
 			firstColumnMode: "service",
 			selectedServiceIds: new Set(["svc1"]),
 			calendar: {
-				...base.calendar!,
+				...baseCalendar,
 				settings: {
-					...base.calendar!.settings,
+					...baseCalendar.settings,
 					services: [{ id: "svc1", name: "Service 1" }],
 				},
 			},
@@ -877,7 +880,7 @@ describe("getExceptionForDate", () => {
 	it("finds a matching exception", () => {
 		const result = getExceptionForDate(settings, "2024-01-15");
 		expect(result).toBeDefined();
-		expect(result!.reason).toBe("Holiday");
+		expect(result?.reason).toBe("Holiday");
 	});
 
 	it("returns undefined when no match", () => {
