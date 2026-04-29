@@ -1,0 +1,400 @@
+.hbe-settings-shell {
+	--hbe-settings-input-bg: #ffffff;
+	--hbe-settings-input-border: rgba(0, 0, 0, 0.12);
+	--hbe-settings-input-border-hover: rgba(22, 119, 255, 0.45);
+	--hbe-settings-input-text: rgba(0, 0, 0, 0.88);
+	--hbe-settings-input-placeholder: rgba(0, 0, 0, 0.4);
+	--hbe-settings-input-radius: 10px;
+	--hbe-settings-input-height: 40px;
+	--hbe-settings-input-font-size: 13px;
+
+	/* Chrome colors — mirror the shell's --shell-chrome-* variables.
+	   Only apply the local fallback when the shell var is not provided. */
+	--hbe-chrome-bg: var(--shell-chrome-bg, #edf1f5);
+	--hbe-chrome-raised: var(--shell-chrome-raised, rgba(255, 255, 255, 0.76));
+	--hbe-chrome-border: var(--color-border-subtle, rgba(15, 23, 42, 0.09));
+	--hbe-chrome-border-strong: var(
+		--color-border-strong,
+		rgba(15, 23, 42, 0.14)
+	);
+	--hbe-chrome-surface: var(--color-bg-surface, #ffffff);
+}
+
+body[data-theme="dark"] .hbe-settings-shell,
+.wp-react-ui-root[data-theme="dark"] .hbe-settings-shell {
+	--hbe-settings-input-bg: #1f1f1f;
+	--hbe-settings-input-border: rgba(255, 255, 255, 0.12);
+	--hbe-settings-input-border-hover: rgba(64, 150, 255, 0.55);
+	--hbe-settings-input-text: rgba(255, 255, 255, 0.88);
+	--hbe-settings-input-placeholder: rgba(255, 255, 255, 0.38);
+
+	/* Chrome colors — dark equivalents of shell's --shell-chrome-* */
+	--hbe-chrome-bg: var(--shell-chrome-bg, #172132);
+	--hbe-chrome-raised: var(--shell-chrome-raised, rgba(19, 28, 43, 0.88));
+	--hbe-chrome-border: var(--color-border-subtle, rgba(255, 255, 255, 0.12));
+	--hbe-chrome-border-strong: var(
+		--color-border-strong,
+		rgba(255, 255, 255, 0.2)
+	);
+	--hbe-chrome-surface: var(--color-bg-surface, #131c2b);
+}
+
+.hbe-settings-toolbar {
+	backdrop-filter: none;
+	box-shadow: none;
+	background: var(--hbe-chrome-bg) !important;
+	border-bottom: 1px solid var(--hbe-chrome-border) !important;
+	transition: background 300ms ease;
+}
+
+.hbe-settings-shell {
+	height: 100%;
+	min-height: 100%;
+}
+
+.hbe-settings-booking-workspace {
+	box-sizing: border-box;
+}
+
+.hbe-settings-booking-view {
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	backdrop-filter: none;
+	overflow: hidden;
+	height: 100%;
+	min-height: 100%;
+}
+
+.hbe-settings-booking-main {
+	backdrop-filter: none;
+}
+
+.hbe-settings-shell .ant-input,
+.hbe-settings-shell .ant-input-affix-wrapper,
+.hbe-settings-shell .ant-input-textarea,
+.hbe-settings-shell .ant-input-number,
+.hbe-settings-shell .ant-input-number-affix-wrapper,
+.hbe-settings-shell .ant-picker,
+.hbe-settings-shell .ant-select-selector {
+	border-radius: var(--hbe-settings-input-radius) !important;
+	border-color: var(--hbe-settings-input-border) !important;
+	background: var(--hbe-settings-input-bg) !important;
+	color: var(--hbe-settings-input-text) !important;
+	box-shadow: none !important;
+	font-size: var(--hbe-settings-input-font-size) !important;
+}
+
+.hbe-settings-shell .ant-input-textarea textarea.ant-input {
+	background: var(--hbe-settings-input-bg) !important;
+	color: var(--hbe-settings-input-text) !important;
+	height: auto !important;
+	min-height: 80px;
+}
+
+.hbe-settings-shell .ant-input:not(textarea),
+.hbe-settings-shell .ant-input-affix-wrapper,
+.hbe-settings-shell .ant-input-number,
+.hbe-settings-shell .ant-picker,
+.hbe-settings-shell .ant-select-single .ant-select-selector {
+	min-height: var(--hbe-settings-input-height) !important;
+	height: var(--hbe-settings-input-height) !important;
+}
+
+.hbe-settings-shell .ant-input-affix-wrapper,
+.hbe-settings-shell .ant-picker,
+.hbe-settings-shell .ant-select-single .ant-select-selector {
+	display: flex;
+	align-items: center;
+}
+
+.hbe-settings-shell .ant-picker {
+	padding-inline: 12px !important;
+	gap: 8px;
+}
+
+.hbe-settings-shell .ant-picker-input {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.hbe-settings-shell .ant-input:not(textarea),
+.hbe-settings-shell .ant-input-affix-wrapper .ant-input,
+.hbe-settings-shell .ant-input-number input,
+.hbe-settings-shell .ant-picker input,
+.hbe-settings-shell .ant-select-selection-search-input {
+	background: transparent !important;
+	color: var(--hbe-settings-input-text) !important;
+}
+
+.hbe-settings-shell .ant-input:not(textarea),
+.hbe-settings-shell .ant-input-affix-wrapper .ant-input,
+.hbe-settings-shell .ant-picker input {
+	height: 100% !important;
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+}
+
+.hbe-settings-shell .ant-input-number-input-wrap,
+.hbe-settings-shell .ant-input-number input {
+	height: 100% !important;
+}
+
+.hbe-settings-shell .ant-picker input {
+	font-size: var(--hbe-settings-input-font-size) !important;
+	font-variant-numeric: tabular-nums;
+	padding-right: 4px !important;
+}
+
+.hbe-settings-shell .ant-select-single .ant-select-selection-item,
+.hbe-settings-shell .ant-select-single .ant-select-selection-placeholder {
+	line-height: calc(var(--hbe-settings-input-height) - 2px) !important;
+	font-size: var(--hbe-settings-input-font-size) !important;
+}
+
+.hbe-settings-shell .ant-picker-suffix,
+.hbe-settings-shell .ant-picker-clear {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	align-self: center;
+	margin: 0 !important;
+}
+
+.hbe-settings-shell .ant-input::placeholder,
+.hbe-settings-shell .ant-input-affix-wrapper .ant-input::placeholder,
+.hbe-settings-shell .ant-picker input::placeholder,
+.hbe-settings-shell .ant-input-number input::placeholder {
+	color: var(--hbe-settings-input-placeholder) !important;
+}
+
+.hbe-settings-shell .ant-select-selection-placeholder {
+	color: var(--hbe-settings-input-placeholder) !important;
+}
+
+.hbe-settings-shell .ant-input:hover,
+.hbe-settings-shell .ant-input:focus,
+.hbe-settings-shell .ant-input-textarea:hover,
+.hbe-settings-shell .ant-input-textarea:focus-within,
+.hbe-settings-shell .ant-input-affix-wrapper:hover,
+.hbe-settings-shell .ant-input-affix-wrapper:focus,
+.hbe-settings-shell .ant-input-affix-wrapper-focused,
+.hbe-settings-shell .ant-input-number:hover,
+.hbe-settings-shell .ant-input-number-focused,
+.hbe-settings-shell .ant-picker:hover,
+.hbe-settings-shell .ant-picker-focused,
+.hbe-settings-shell .ant-select-focused .ant-select-selector,
+.hbe-settings-shell .ant-select-selector:hover {
+	border-color: var(--hbe-settings-input-border-hover) !important;
+	box-shadow: none !important;
+}
+
+.hbe-settings-shell .ant-input-number-group-addon {
+	border-color: var(--hbe-settings-input-border) !important;
+	background: color-mix(
+		in srgb,
+		var(--hbe-settings-input-bg) 94%,
+		var(--hbe-settings-input-text) 6%
+	) !important;
+	color: var(--hbe-settings-input-text) !important;
+	min-height: var(--hbe-settings-input-height) !important;
+	height: var(--hbe-settings-input-height) !important;
+	display: inline-flex !important;
+	align-items: center;
+	padding: 0 12px !important;
+	width: auto;
+	font-size: var(--hbe-settings-input-font-size) !important;
+}
+
+.hbe-settings-shell .ant-input-number-group-addon:first-child {
+	border-radius: var(--hbe-settings-input-radius) 0 0
+		var(--hbe-settings-input-radius) !important;
+}
+
+.hbe-settings-shell .ant-input-number-group-addon:last-child {
+	border-radius: 0 var(--hbe-settings-input-radius)
+		var(--hbe-settings-input-radius) 0 !important;
+}
+
+.hbe-settings-shell .ant-input-number-group-wrapper,
+.hbe-settings-shell .ant-input-number-group {
+	display: inline-flex !important;
+	align-items: stretch;
+}
+
+.hbe-settings-shell .ant-input-number-group .ant-input-number {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-shell
+	.ant-input-number-group
+	.ant-input-number-group-addon
+	+ .ant-input-number {
+	border-top-left-radius: 0 !important;
+	border-bottom-left-radius: 0 !important;
+}
+
+.hbe-settings-shell
+	.ant-input-number-group
+	.ant-input-number:has(+ .ant-input-number-group-addon) {
+	border-top-right-radius: 0 !important;
+	border-bottom-right-radius: 0 !important;
+}
+
+.hbe-settings-shell .ant-select-dropdown,
+.hbe-settings-shell .ant-picker-dropdown .ant-picker-panel-container {
+	border-radius: 12px !important;
+}
+
+.hbe-settings-shell .ant-picker-calendar-mini .ant-picker-calendar-header {
+	display: grid !important;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px 12px !important;
+}
+
+.hbe-settings-shell .ant-picker-calendar-mini .ant-picker-calendar-year-select,
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-picker-calendar-month-select {
+	min-width: 0;
+	width: 100%;
+}
+
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-picker-calendar-header
+	.ant-select {
+	width: 100% !important;
+	min-width: 0;
+}
+
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-select-single
+	.ant-select-selector {
+	min-height: 32px !important;
+	height: 32px !important;
+	padding: 0 28px 0 10px !important;
+	border-radius: 8px !important;
+}
+
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-select-single
+	.ant-select-selection-item,
+.hbe-settings-shell
+	.ant-picker-calendar-mini
+	.ant-select-single
+	.ant-select-selection-placeholder {
+	line-height: 30px !important;
+	font-size: var(--hbe-settings-input-font-size) !important;
+}
+
+.hbe-settings-shell .ant-picker-calendar-mini .ant-select-arrow {
+	inset-inline-end: 10px !important;
+}
+
+.hbe-settings-sidebar-calendar,
+.hbe-settings-sidebar-calendar .ant-picker-panel {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-picker-calendar-header {
+	padding-inline: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-picker-body {
+	padding-inline: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-select-selector,
+.hbe-settings-sidebar-calendar .ant-picker-cell-inner,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date-today,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date-value,
+.hbe-settings-sidebar-calendar .ant-picker-calendar-date-content {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar *,
+.hbe-settings-sidebar-calendar *::before,
+.hbe-settings-sidebar-calendar *::after {
+	border-radius: 0 !important;
+}
+
+.hbe-settings-sidebar-calendar .ant-picker-calendar-mode-switch {
+	display: none !important;
+}
+
+#screen-meta-links .show-settings {
+	display: flex !important;
+	align-items: center !important;
+	height: auto !important;
+	padding: 3px 6px 3px 16px !important;
+	line-height: 1.7;
+	text-align: left;
+	vertical-align: top;
+	gap: 0.15rem;
+}
+
+#screen-meta-links .show-settings::after {
+	content: "\f140";
+	right: auto;
+	bottom: auto;
+	display: inline-block;
+	padding: 0 0 0 2px;
+	position: static;
+	vertical-align: middle;
+	font:
+		normal 20px / 1 dashicons,
+		sans-serif;
+	text-align: center;
+	flex-shrink: 0;
+}
+
+/* ── View transition overlay ────────────────────────────────────── */
+.hbe-settings-view-transition-overlay {
+	animation: hbe-fade-in 150ms ease forwards;
+}
+
+@keyframes hbe-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* ── Progress bar loading indicator ────────────────────────────── */
+@keyframes hbe-progress-bar {
+	0% {
+		transform: translateX(-100%);
+	}
+	60% {
+		transform: translateX(0%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+.hbe-settings-loading-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	overflow: hidden;
+	z-index: 20;
+}
+
+.hbe-settings-loading-bar > div {
+	position: absolute;
+	inset: 0;
+	animation: hbe-progress-bar 1.4s ease-in-out infinite;
+}

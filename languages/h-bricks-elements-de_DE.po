@@ -1,0 +1,290 @@
+# German translations for H-Bricks-Elements
+# Copyright (C) 2024 Matthias Hader
+# This file is distributed under the same license as the H-Bricks-Elements package.
+msgid ""
+msgstr ""
+"Project-Id-Version: H-Bricks-Elements 0.0.1\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: German\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: de_DE\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: includes/class-hbe-admin.php:49
+msgid "H-Bricks Elements"
+msgstr "H-Bricks-Elemente"
+
+#: includes/class-hbe-admin.php:60
+msgid "Email Designer"
+msgstr "E-Mail-Designer"
+
+#: includes/class-hbe-plugin.php:174
+msgid "H-Additional-Blocks"
+msgstr "H-Zusätzliche-Blöcke"
+
+#: elements/booking/class-booking.php:44
+msgid "Booking Module"
+msgstr "Buchungsmodul"
+
+# Frontend strings (calendar.ts, etc.)
+msgid "Select a date to continue."
+msgstr "Wählen Sie ein Datum, um fortzufahren."
+
+msgid "Back"
+msgstr "Zurück"
+
+msgid "Continue to Time"
+msgstr "Weiter zur Uhrzeit"
+
+msgid "Selected Time"
+msgstr "Ausgewählte Zeit"
+
+msgid "Continue to Date"
+msgstr "Weiter zum Datum"
+
+msgid " min"
+msgstr " Min."
+
+msgid "Booking unavailable"
+msgstr "Buchung nicht verfügbar"
+
+msgid "This booking page is not ready yet"
+msgstr "Diese Buchungsseite ist noch nicht bereit"
+
+msgid "Please check back later."
+msgstr "Bitte schauen Sie später wieder vorbei."
+
+msgid "No availability yet"
+msgstr "Noch keine Verfügbarkeit"
+
+msgid "Please try again later."
+msgstr "Bitte versuchen Sie es später erneut."
+
+msgid "Calendar unavailable"
+msgstr "Kalender nicht verfügbar"
+
+msgid "Availability could not be loaded"
+msgstr "Verfügbarkeit konnte nicht geladen werden"
+
+msgid "Booking options unavailable"
+msgstr "Buchungsoptionen nicht verfügbar"
+
+msgid "We couldn't load the available booking options."
+msgstr "Wir konnten die verfügbaren Buchungsoptionen nicht laden."
+
+msgid "The calendar data could not be loaded."
+msgstr "Die Kalenderdaten konnten nicht geladen werden."
+
+msgid "Select a service to narrow availability."
+msgstr "Wählen Sie einen Service, um die Verfügbarkeit einzugrenzen."
+
+msgid "Choose a day to inspect the currently available booking slots."
+msgstr ""
+"Wählen Sie einen Tag, um die aktuell verfügbaren Buchungszeiten anzusehen."
+
+msgid "Online booking is disabled"
+msgstr "Online-Buchung ist deaktiviert"
+
+msgid "Please contact us directly if you would like to schedule this meeting."
+msgstr ""
+"Bitte kontaktieren Sie uns direkt, wenn Sie diesen Termin vereinbaren "
+"möchten."
+
+msgid "Booking details"
+msgstr "Buchungsdetails"
+
+msgid "Choose a date and time that works best for you."
+msgstr "Wählen Sie ein Datum und eine Uhrzeit, die Ihnen am besten passt."
+
+msgid "Services"
+msgstr "Services"
+
+msgid "No services are available for booking right now."
+msgstr "Momentan sind keine Services für Buchungen verfügbar."
+
+msgid "Select one or more services."
+msgstr "Wählen Sie einen oder mehrere Services."
+
+msgid "Select a service."
+msgstr "Wählen Sie einen Service."
+
+msgid "Previous month"
+msgstr "Vorheriger Monat"
+
+msgid "Next month"
+msgstr "Nächster Monat"
+
+msgid "Online booking is not available for this calendar right now."
+msgstr "Online-Buchung ist für diesen Kalender momentan nicht verfügbar."
+
+msgid "Choose a date to see available times."
+msgstr "Wählen Sie ein Datum, um verfügbare Zeiten zu sehen."
+
+msgid "This date is not available"
+msgstr "Dieses Datum ist nicht verfügbar"
+
+msgid "No times are available on this date."
+msgstr "An diesem Datum sind keine Zeiten verfügbar."
+
+msgid "Booking summary"
+msgstr "Buchungszusammenfassung"
+
+msgid "Service"
+msgstr "Service"
+
+msgid "Date"
+msgstr "Datum"
+
+msgid "Time"
+msgstr "Uhrzeit"
+
+msgid "Total Due"
+msgstr "Gesamtsumme"
+
+msgid "Full name"
+msgstr "Vollständiger Name"
+
+msgid "Your name"
+msgstr "Ihr Name"
+
+msgid "Email address"
+msgstr "E-Mail-Adresse"
+
+msgid "you@example.com"
+msgstr "sie@beispiel.de"
+
+msgid "Phone number"
+msgstr "Telefonnummer"
+
+msgid "Optional"
+msgstr "Optional"
+
+msgid "Additional notes"
+msgstr "Zusätzliche Notizen"
+
+msgid "Anything we should know?"
+msgstr "Gibt es etwas, das wir wissen sollten?"
+
+msgid "Back to Time"
+msgstr "Zurück zur Uhrzeit"
+
+msgid "Back to Calendar"
+msgstr "Zurück zum Kalender"
+
+msgid "Confirming..."
+msgstr "Bestätigung..."
+
+msgid "Confirm booking"
+msgstr "Buchung bestätigen"
+
+msgid "Choose a slot"
+msgstr "Wählen Sie einen Zeitslot"
+
+msgid ""
+"Your booking details will appear here once the reservation is confirmed."
+msgstr ""
+"Ihre Buchungsdetails erscheinen hier, sobald die Reservierung bestätigt ist."
+
+msgid "Notes"
+msgstr "Notizen"
+
+msgid "Session"
+msgstr "Sitzung"
+
+msgid "Date & Time"
+msgstr "Datum & Uhrzeit"
+
+msgid "Participant"
+msgstr "Teilnehmer"
+
+msgid "Booking Confirmed"
+msgstr "Buchung bestätigt"
+
+msgid "Your meeting has been successfully scheduled."
+msgstr "Ihr Termin wurde erfolgreich geplant."
+
+msgid "Book another time"
+msgstr "Weiteren Termin buchen"
+
+msgid "12h"
+msgstr "12h"
+
+msgid "24h"
+msgstr "24h"
+
+msgid "Select a date and time slot first."
+msgstr "Wählen Sie zuerst ein Datum und einen Zeitslot."
+
+msgid "Enter your name to confirm the booking."
+msgstr "Geben Sie Ihren Namen ein, um die Buchung zu bestätigen."
+
+msgid "Enter your email to confirm the booking."
+msgstr "Geben Sie Ihre E-Mail ein, um die Buchung zu bestätigen."
+
+msgid "Guest"
+msgstr "Gast"
+
+msgid "Booking could not be created."
+msgstr "Buchung konnte nicht erstellt werden."
+
+# Stepper
+msgid "Info"
+msgstr "Info"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "Done"
+msgstr "Fertig"
+
+# Cancel page
+msgid "Cancel Booking"
+msgstr "Buchung stornieren"
+
+msgid "Are you sure you want to cancel this booking?"
+msgstr "Sind Sie sicher, dass Sie diese Buchung stornieren möchten?"
+
+msgid "Yes, cancel my booking"
+msgstr "Ja, meine Buchung stornieren"
+
+msgid "No, keep it"
+msgstr "Nein, behalten"
+
+msgid "Booking Cancelled"
+msgstr "Buchung storniert"
+
+msgid ""
+"Your booking has been successfully cancelled. We hope to see you again soon!"
+msgstr ""
+"Ihre Buchung wurde erfolgreich storniert. Wir hoffen, Sie bald wiederzusehen!"
+
+msgid "Go back home"
+msgstr "Zurück zur Startseite"
+
+msgid "Something went wrong"
+msgstr "Etwas ist schiefgegangen"
+
+msgid "An unexpected error occurred."
+msgstr "Ein unerwarteter Fehler ist aufgetreten."
+
+msgid "No data provided."
+msgstr "Keine Daten bereitgestellt."
+
+# Email template
+msgid "Booking confirmed!"
+msgstr "Buchung bestätigt!"
+
+msgid "Your appointment"
+msgstr "Ihr Termin"
+
+msgid "Need to cancel your appointment?"
+msgstr "Möchten Sie Ihren Termin absagen?"
+
+msgid "Cancel booking"
+msgstr "Buchung stornieren"
+
+msgid "This email was generated by H-Bricks Elements for WordPress."
+msgstr "Diese E-Mail wurde von H-Bricks-Elemente für WordPress generiert."

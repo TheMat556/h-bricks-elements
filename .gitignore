@@ -22,11 +22,13 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.test.local
 .env.production.local
 .env.local
+.opencode
 
 # caches
 .eslintcache
 .cache
 *.tsbuildinfo
+.phpunit.cache
 
 # IntelliJ based IDEs
 .idea

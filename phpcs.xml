@@ -3,7 +3,11 @@
     <description>WordPress Coding Standards</description>
 
     <file>elements/</file>
+    <file>includes/</file>
     <file>plugin.php</file>
+
+    <exclude-pattern>vendor/</exclude-pattern>
+    <exclude-pattern>.phpunit.cache/</exclude-pattern>
 
     <arg name="extensions" value="php"/>
     <arg name="colors"/>

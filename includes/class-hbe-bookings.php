@@ -1,0 +1,673 @@
+<?php
+/**
+ * Booking repository and validation helpers.
+ *
+ * @package H-Bricks-Elements
+ */
+
+declare(strict_types=1);
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Handles CRUD operations for persisted bookings.
+ */
+class HBE_Bookings {
+
+	/**
+	 * Explicit column list used in SELECT queries.
+	 */
+	const COLUMNS = 'id, calendar_id, service_id, status, customer_name, customer_email, customer_phone, customer_notes, start_datetime, end_datetime, timezone, meta, created_at, updated_at';
+
+	/**
+	 * Returns bookings for one calendar, optionally filtered by overlapping range.
+	 *
+	 * @param int         $calendar_id Calendar ID.
+	 * @param string|null $start_iso   Optional start ISO timestamp.
+	 * @param string|null $end_iso     Optional end ISO timestamp.
+	 * @param int         $per_page    Number of results per page (default 100).
+	 * @param int         $page        1-indexed page number (default 1).
+	 * @return array<int,array<string,mixed>>|WP_Error
+	 */
+	public static function list_for_calendar( int $calendar_id, ?string $start_iso = null, ?string $end_iso = null, int $per_page = 100, int $page = 1 ) {
+		global $wpdb;
+
+		$table_name = HBE_Bookings_Table::get_name();
+		$per_page   = max( 1, $per_page );
+		$offset     = max( 0, ( $page - 1 ) * $per_page );
+		$columns    = self::COLUMNS;
+
+		if ( null !== $start_iso && null !== $end_iso ) {
+			$start_datetime = self::parse_request_datetime( $start_iso );
+			$end_datetime   = self::parse_request_datetime( $end_iso );
+
+			if ( ! $start_datetime || ! $end_datetime ) {
+				return new WP_Error(
+					'hbe_booking_invalid_range',
+					__( 'Booking range is invalid.', 'h-bricks-elements' ),
+					array( 'status' => 400 )
+				);
+			}
+
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT {$columns} FROM %i WHERE calendar_id = %d AND start_datetime < %s AND end_datetime > %s ORDER BY start_datetime ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
+					$calendar_id,
+					$end_datetime,
+					$start_datetime,
+					$per_page,
+					$offset
+				),
+				ARRAY_A
+			);
+		} else {
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT {$columns} FROM %i WHERE calendar_id = %d ORDER BY start_datetime ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
+					$calendar_id,
+					$per_page,
+					$offset
+				),
+				ARRAY_A
+			);
+		}
+
+		if ( ! is_array( $results ) ) {
+			return array();
+		}
+
+		return array_map( array( __CLASS__, 'format_row' ), $results );
+	}
+
+	/**
+	 * Creates a booking.
+	 *
+	 * @param int                 $calendar_id Calendar ID.
+	 * @param array<string,mixed> $payload    Raw booking payload.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	public static function create( int $calendar_id, array $payload ) {
+		global $wpdb;
+
+		$prepared = self::prepare_payload( $payload );
+		$settings = HBE_Calendar_Settings::get( $calendar_id );
+
+		if ( is_wp_error( $prepared ) ) {
+			return $prepared;
+		}
+
+		if ( ! self::is_within_booking_window( $prepared['start_datetime'], $settings ) ) {
+			return new WP_Error(
+				'hbe_booking_outside_window',
+				__( 'This booking is outside the allowed booking window.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if (
+			empty( $settings['allowDoubleBookings'] ) &&
+			self::has_conflict( $calendar_id, $prepared['start_datetime'], $prepared['end_datetime'] )
+		) {
+			return new WP_Error(
+				'hbe_booking_conflict',
+				__( 'This timeslot is already booked.', 'h-bricks-elements' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		$inserted = $wpdb->insert(
+			HBE_Bookings_Table::get_name(),
+			array(
+				'calendar_id'    => $calendar_id,
+				'service_id'     => $prepared['service_id'],
+				'status'         => $prepared['status'],
+				'customer_name'  => $prepared['customer_name'],
+				'customer_email' => $prepared['customer_email'],
+				'customer_phone' => $prepared['customer_phone'],
+				'customer_notes' => $prepared['customer_notes'],
+				'start_datetime' => $prepared['start_datetime'],
+				'end_datetime'   => $prepared['end_datetime'],
+				'timezone'       => $prepared['timezone'],
+				'meta'           => $prepared['meta'],
+			),
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		if ( false === $inserted ) {
+			// Detect duplicate-key violation from the composite unique index
+			// (calendar_id, start_datetime, end_datetime) as a DB-level
+			// safeguard against race conditions.
+			$last_error = $wpdb->last_error ?? '';
+			if (
+				false !== strpos( $last_error, '1062' ) ||
+				false !== strpos( $last_error, 'Duplicate entry' )
+			) {
+				return new WP_Error(
+					'booking_conflict',
+					__( 'This timeslot is already booked.', 'h-bricks-elements' ),
+					array( 'status' => 409 )
+				);
+			}
+
+			return new WP_Error(
+				'hbe_booking_create_failed',
+				__( 'Booking could not be created.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$booking = self::get_raw( (int) $wpdb->insert_id, $calendar_id );
+
+		if ( ! $booking ) {
+			return new WP_Error(
+				'hbe_booking_not_found',
+				__( 'Booking not found.', 'h-bricks-elements' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return self::format_row( $booking );
+	}
+
+	/**
+	 * Updates a booking.
+	 *
+	 * @param int                 $calendar_id Calendar ID.
+	 * @param int                 $booking_id  Booking ID.
+	 * @param array<string,mixed> $payload    Raw booking payload.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	public static function update( int $calendar_id, int $booking_id, array $payload ) {
+		global $wpdb;
+
+		$existing = self::get_raw( $booking_id, $calendar_id );
+		$settings = HBE_Calendar_Settings::get( $calendar_id );
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'hbe_booking_not_found',
+				__( 'Booking not found.', 'h-bricks-elements' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$prepared = self::prepare_payload( $payload, $existing );
+
+		if ( is_wp_error( $prepared ) ) {
+			return $prepared;
+		}
+
+		if ( ! self::is_within_booking_window( $prepared['start_datetime'], $settings ) ) {
+			return new WP_Error(
+				'hbe_booking_outside_window',
+				__( 'This booking is outside the allowed booking window.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if (
+			empty( $settings['allowDoubleBookings'] ) &&
+			self::has_conflict( $calendar_id, $prepared['start_datetime'], $prepared['end_datetime'], $booking_id )
+		) {
+			return new WP_Error(
+				'hbe_booking_conflict',
+				__( 'This timeslot is already booked.', 'h-bricks-elements' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		$updated = $wpdb->update(
+			HBE_Bookings_Table::get_name(),
+			array(
+				'service_id'     => $prepared['service_id'],
+				'status'         => $prepared['status'],
+				'customer_name'  => $prepared['customer_name'],
+				'customer_email' => $prepared['customer_email'],
+				'customer_phone' => $prepared['customer_phone'],
+				'customer_notes' => $prepared['customer_notes'],
+				'start_datetime' => $prepared['start_datetime'],
+				'end_datetime'   => $prepared['end_datetime'],
+				'timezone'       => $prepared['timezone'],
+				'meta'           => $prepared['meta'],
+			),
+			array(
+				'id'          => $booking_id,
+				'calendar_id' => $calendar_id,
+			),
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ),
+			array( '%d', '%d' )
+		);
+
+		if ( false === $updated ) {
+			$last_error = $wpdb->last_error ?? '';
+			if (
+				false !== strpos( $last_error, '1062' ) ||
+				false !== strpos( $last_error, 'Duplicate entry' )
+			) {
+				return new WP_Error(
+					'booking_conflict',
+					__( 'This timeslot is already booked.', 'h-bricks-elements' ),
+					array( 'status' => 409 )
+				);
+			}
+
+			return new WP_Error(
+				'hbe_booking_update_failed',
+				__( 'Booking could not be updated.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$booking = self::get_raw( $booking_id, $calendar_id );
+
+		if ( ! $booking ) {
+			return new WP_Error(
+				'hbe_booking_not_found',
+				__( 'Booking not found.', 'h-bricks-elements' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return self::format_row( $booking );
+	}
+
+	/**
+	 * Deletes a booking.
+	 *
+	 * @param int $calendar_id Calendar ID.
+	 * @param int $booking_id  Booking ID.
+	 * @return bool|WP_Error
+	 */
+	public static function delete( int $calendar_id, int $booking_id ) {
+		global $wpdb;
+
+		$existing = self::get_raw( $booking_id, $calendar_id );
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'hbe_booking_not_found',
+				__( 'Booking not found.', 'h-bricks-elements' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$deleted = $wpdb->delete(
+			HBE_Bookings_Table::get_name(),
+			array(
+				'id'          => $booking_id,
+				'calendar_id' => $calendar_id,
+			),
+			array( '%d', '%d' )
+		);
+
+		if ( false === $deleted ) {
+			return new WP_Error(
+				'hbe_booking_delete_failed',
+				__( 'Booking could not be deleted.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Cancels a booking by setting its status to 'cancelled'.
+	 *
+	 * @param int $calendar_id Calendar ID.
+	 * @param int $booking_id  Booking ID.
+	 * @return bool|WP_Error
+	 */
+	public static function cancel( int $calendar_id, int $booking_id ) {
+		global $wpdb;
+
+		$existing = self::get_raw( $booking_id, $calendar_id );
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'hbe_booking_not_found',
+				__( 'Booking not found.', 'h-bricks-elements' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$updated = $wpdb->update(
+			HBE_Bookings_Table::get_name(),
+			array( 'status' => 'cancelled' ),
+			array(
+				'id'          => $booking_id,
+				'calendar_id' => $calendar_id,
+			),
+			array( '%s' ),
+			array( '%d', '%d' )
+		);
+
+		if ( false === $updated ) {
+			return new WP_Error(
+				'hbe_booking_cancel_failed',
+				__( 'Booking could not be cancelled.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Deletes all bookings for one calendar.
+	 *
+	 * @param int $calendar_id Calendar ID.
+	 * @return bool|WP_Error
+	 */
+	public static function delete_for_calendar( int $calendar_id ) {
+		global $wpdb;
+
+		$deleted = $wpdb->delete(
+			HBE_Bookings_Table::get_name(),
+			array(
+				'calendar_id' => $calendar_id,
+			),
+			array( '%d' )
+		);
+
+		if ( false === $deleted ) {
+			return new WP_Error(
+				'hbe_booking_delete_failed',
+				__( 'Bookings for this calendar could not be deleted.', 'h-bricks-elements' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Returns one raw booking row.
+	 *
+	 * @param int $booking_id  Booking ID.
+	 * @param int $calendar_id Optional calendar filter.
+	 * @return array<string,mixed>|null
+	 */
+	private static function get_raw( int $booking_id, int $calendar_id = 0 ): ?array {
+		global $wpdb;
+
+		$table_name = HBE_Bookings_Table::get_name();
+		$columns    = self::COLUMNS;
+
+		if ( $calendar_id > 0 ) {
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT {$columns} FROM %i WHERE id = %d AND calendar_id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
+					$booking_id,
+					$calendar_id
+				),
+				ARRAY_A
+			);
+		} else {
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT {$columns} FROM %i WHERE id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
+					$booking_id
+				),
+				ARRAY_A
+			);
+		}
+
+		return is_array( $row ) ? $row : null;
+	}
+
+	/**
+	 * Prepares and validates booking payload data.
+	 *
+	 * @param array<string,mixed>      $payload  Raw request payload.
+	 * @param array<string,mixed>|null $existing Existing row for updates.
+	 * @return array<string,string>|WP_Error
+	 */
+	private static function prepare_payload( array $payload, ?array $existing = null ) {
+		$title = isset( $payload['title'] )
+			? sanitize_text_field( (string) $payload['title'] )
+			: (string) ( $existing['customer_name'] ?? '' );
+
+		if ( '' === trim( $title ) ) {
+			return new WP_Error(
+				'hbe_booking_title_required',
+				__( 'Booking name is required.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$start_datetime = isset( $payload['start'] )
+			? self::parse_request_datetime( (string) $payload['start'] )
+			: (string) ( $existing['start_datetime'] ?? '' );
+		$end_datetime   = isset( $payload['end'] )
+			? self::parse_request_datetime( (string) $payload['end'] )
+			: (string) ( $existing['end_datetime'] ?? '' );
+
+		if ( ! $start_datetime || ! $end_datetime ) {
+			return new WP_Error(
+				'hbe_booking_datetime_invalid',
+				__( 'Booking start and end are required.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( $start_datetime >= $end_datetime ) {
+			return new WP_Error(
+				'hbe_booking_datetime_order',
+				__( 'Booking end must be after booking start.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$status = isset( $payload['status'] )
+			? sanitize_key( (string) $payload['status'] )
+			: (string) ( $existing['status'] ?? 'confirmed' );
+
+		if ( ! in_array( $status, array( 'confirmed', 'pending', 'cancelled' ), true ) ) {
+			$status = 'confirmed';
+		}
+
+		$timezone = isset( $payload['timezone'] )
+			? sanitize_text_field( (string) $payload['timezone'] )
+			: (string) ( $existing['timezone'] ?? 'UTC' );
+
+		if ( '' === $timezone ) {
+			$timezone = 'UTC';
+		}
+
+		$customer_email = isset( $payload['customerEmail'] )
+			? sanitize_email( (string) $payload['customerEmail'] )
+			: (string) ( $existing['customer_email'] ?? '' );
+
+		if ( '' !== $customer_email && ! is_email( $customer_email ) ) {
+			return new WP_Error(
+				'invalid_email',
+				__( 'A valid email address is required.', 'h-bricks-elements' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return array(
+			'service_id'     => isset( $payload['serviceId'] )
+				? sanitize_key( (string) $payload['serviceId'] )
+				: (string) ( $existing['service_id'] ?? '' ),
+			'status'         => $status,
+			'customer_name'  => $title,
+			'customer_email' => $customer_email,
+			'customer_phone' => isset( $payload['customerPhone'] )
+				? sanitize_text_field( (string) $payload['customerPhone'] )
+				: (string) ( $existing['customer_phone'] ?? '' ),
+			'customer_notes' => isset( $payload['description'] )
+				? sanitize_textarea_field( (string) $payload['description'] )
+				: (string) ( $existing['customer_notes'] ?? '' ),
+			'start_datetime' => $start_datetime,
+			'end_datetime'   => $end_datetime,
+			'timezone'       => $timezone,
+			'meta'           => isset( $payload['meta'] )
+				? wp_json_encode( $payload['meta'] )
+				: (string) ( $existing['meta'] ?? '' ),
+		);
+	}
+
+	/**
+	 * Checks whether a booking overlaps an existing booking.
+	 *
+	 * @param int    $calendar_id     Calendar ID.
+	 * @param string $start_datetime  New booking start in UTC mysql format.
+	 * @param string $end_datetime    New booking end in UTC mysql format.
+	 * @param int    $exclude_booking Booking ID to exclude.
+	 * @return bool
+	 */
+	private static function has_conflict(
+		int $calendar_id,
+		string $start_datetime,
+		string $end_datetime,
+		int $exclude_booking = 0
+	): bool {
+		global $wpdb;
+
+		$table_name = HBE_Bookings_Table::get_name();
+
+		if ( $exclude_booking > 0 ) {
+			$count = $wpdb->get_var(
+				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					'SELECT COUNT(*) FROM %i WHERE calendar_id = %d AND status != %s AND id != %d AND start_datetime < %s AND end_datetime > %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
+					$calendar_id,
+					'cancelled',
+					$exclude_booking,
+					$end_datetime,
+					$start_datetime
+				)
+			);
+		} else {
+			$count = $wpdb->get_var(
+				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					'SELECT COUNT(*) FROM %i WHERE calendar_id = %d AND status != %s AND start_datetime < %s AND end_datetime > %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
+					$calendar_id,
+					'cancelled',
+					$end_datetime,
+					$start_datetime
+				)
+			);
+		}
+
+		return (int) $count > 0;
+	}
+
+	/**
+	 * Checks whether a booking start is within the configured booking window.
+	 *
+	 * @param string              $start_datetime Booking start in UTC mysql format.
+	 * @param array<string,mixed> $settings       Calendar settings.
+	 * @return bool
+	 */
+	private static function is_within_booking_window( string $start_datetime, array $settings ): bool {
+		$max_advance_days = isset( $settings['slotSettings']['maxAdvanceDays'] )
+			? absint( $settings['slotSettings']['maxAdvanceDays'] )
+			: 0;
+
+		if ( $max_advance_days <= 0 ) {
+			return true;
+		}
+
+		$start_timestamp = strtotime( $start_datetime . ' UTC' );
+
+		if ( false === $start_timestamp ) {
+			return false;
+		}
+
+		$today_timestamp        = strtotime( gmdate( 'Y-m-d 00:00:00' ) . ' UTC' );
+		$last_allowed_timestamp = strtotime( '+' . $max_advance_days . ' days 23:59:59', $today_timestamp );
+
+		if ( false === $today_timestamp || false === $last_allowed_timestamp ) {
+			return false;
+		}
+
+		return $start_timestamp <= $last_allowed_timestamp;
+	}
+
+	/**
+	 * Parses a request datetime into UTC mysql format.
+	 *
+	 * @param string $value Raw datetime string.
+	 * @return string|null
+	 */
+	private static function parse_request_datetime( string $value ): ?string {
+		$value = trim( $value );
+
+		if ( '' === $value ) {
+			return null;
+		}
+
+		$dt = DateTime::createFromFormat( 'Y-m-d H:i:s', $value, new DateTimeZone( 'UTC' ) );
+
+		if ( false === $dt ) {
+			$dt = DateTime::createFromFormat( 'Y-m-d', $value, new DateTimeZone( 'UTC' ) );
+			if ( false === $dt ) {
+				// Fall back to ISO 8601 parsing (e.g. 2026-04-12T22:00:00.000Z).
+				try {
+					$dt = new DateTime( $value );
+					$dt->setTimezone( new DateTimeZone( 'UTC' ) );
+				} catch ( Exception $e ) {
+					return null;
+				}
+			} else {
+				$dt->setTime( 0, 0, 0 );
+			}
+		}
+
+		return $dt->format( 'Y-m-d H:i:s' );
+	}
+
+	/**
+	 * Formats a raw booking row for REST responses.
+	 *
+	 * @param array<string,mixed> $row Raw DB row.
+	 * @return array<string,mixed>
+	 */
+	private static function format_row( array $row ): array {
+		return array(
+			'id'            => (int) $row['id'],
+			'calendarId'    => (int) $row['calendar_id'],
+			'serviceId'     => (string) $row['service_id'],
+			'status'        => (string) $row['status'],
+			'title'         => (string) $row['customer_name'],
+			'description'   => (string) ( $row['customer_notes'] ?? '' ),
+			'customerName'  => (string) $row['customer_name'],
+			'customerEmail' => (string) $row['customer_email'],
+			'customerPhone' => (string) $row['customer_phone'],
+			'start'         => self::mysql_to_iso( (string) $row['start_datetime'] ),
+			'end'           => self::mysql_to_iso( (string) $row['end_datetime'] ),
+			'timezone'      => (string) $row['timezone'],
+			'meta'          => isset( $row['meta'] ) && '' !== $row['meta']
+				? (array) json_decode( (string) $row['meta'], true )
+				: null,
+			'createdAt'     => self::mysql_to_iso( (string) $row['created_at'] ),
+			'updatedAt'     => self::mysql_to_iso( (string) $row['updated_at'] ),
+		);
+	}
+
+	/**
+	 * Converts a UTC mysql datetime string to ISO 8601.
+	 *
+	 * @param string $datetime Mysql datetime.
+	 * @return string
+	 */
+	private static function mysql_to_iso( string $datetime ): string {
+		$timestamp = strtotime( $datetime . ' UTC' );
+
+		if ( false === $timestamp ) {
+			return '';
+		}
+
+		return gmdate( 'c', $timestamp );
+	}
+}
