@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -226,7 +228,9 @@ class HBE_Booking_Mail {
 				. ( $cancel_url ? '<p><a href="' . $cancel_url . '">Cancel booking</a></p>' : '' )
 				. '</body></html>';
 
-			error_log( '[HBE] send_booking_confirmation: compiledHtml is empty for calendar ' . $calendar_id . '. Using fallback email. Open admin settings and save to compile the template.' );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[HBE] send_booking_confirmation: compiledHtml is empty for calendar ' . $calendar_id . '. Using fallback email. Open admin settings and save to compile the template.' );
+			}
 		}
 
 		if ( '' === trim( $body ) ) {
@@ -291,16 +295,18 @@ class HBE_Booking_Mail {
 			'isTest'          => $prepared['isTest'],
 		);
 
-		error_log(
-			sprintf(
-				'[HBE] booking_mail sending calendar=%d booking=%d templateHash=%s version=%d test=%s',
-				(int) $prepared['calendarId'],
-				(int) $prepared['bookingId'],
-				(string) $prepared['templateHash'],
-				(int) $prepared['templateVersion'],
-				! empty( $prepared['isTest'] ) ? 'yes' : 'no'
-			)
-		);
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log(
+				sprintf(
+					'[HBE] booking_mail sending calendar=%d booking=%d templateHash=%s version=%d test=%s',
+					(int) $prepared['calendarId'],
+					(int) $prepared['bookingId'],
+					(string) $prepared['templateHash'],
+					(int) $prepared['templateVersion'],
+					! empty( $prepared['isTest'] ) ? 'yes' : 'no'
+				)
+			);
+		}
 
 		try {
 			$sent = wp_mail(
@@ -325,14 +331,16 @@ class HBE_Booking_Mail {
 			);
 		}
 
-		error_log(
-			sprintf(
-				'[HBE] booking_mail sent calendar=%d booking=%d templateHash=%s',
-				(int) $prepared['calendarId'],
-				(int) $prepared['bookingId'],
-				(string) $prepared['templateHash']
-			)
-		);
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log(
+				sprintf(
+					'[HBE] booking_mail sent calendar=%d booking=%d templateHash=%s',
+					(int) $prepared['calendarId'],
+					(int) $prepared['bookingId'],
+					(string) $prepared['templateHash']
+				)
+			);
+		}
 
 		return true;
 	}
@@ -452,7 +460,7 @@ class HBE_Booking_Mail {
 			return '';
 		}
 
-		$from_name = trim( preg_replace( '/[\r\n]+/', ' ', sanitize_text_field( $from_name ) ) );
+		$from_name = trim( preg_replace( '/[\r\n\0\x{2028}\x{2029}]+/u', ' ', sanitize_text_field( $from_name ) ) );
 		if ( '' === $from_name ) {
 			return 'From: <' . $from_email . '>';
 		}

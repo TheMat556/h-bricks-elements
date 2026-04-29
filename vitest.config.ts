@@ -13,6 +13,7 @@ export default defineConfig({
 				"elements/**/src/**",
 				"elements/**/email-designer/**",
 				"elements/**/cancel/**",
+				"elements/**/settings/src/**",
 			],
 			exclude: [
 				// Mount / entry points (wiring, no logic)
@@ -20,25 +21,8 @@ export default defineConfig({
 				"**/email-designer/email-designer.tsx",
 				"**/settings/settings.tsx",
 				"**/booking/src/booking.ts",
-				// UI shells & complex interactive components
-				"**/SettingsApp.tsx",
-				"**/BookingView.tsx",
-				"**/CalendarSettingsPanel.tsx",
-				"**/RightPanel.tsx",
-				"**/BookingForm.tsx",
-				"**/BookingModal.tsx",
-				"**/CancelApp.tsx",
 				// Config / i18n wrappers
 				"**/i18n.ts",
-				// Untested modules (0% coverage) — add tests or keep excluded
-				"**/api.ts",
-				"**/state.ts",
-				"**/ui/calendar.ts",
-				"**/ui/stepper.ts",
-				"**/useModalOverlay.ts",
-				"**/shared/constants.ts",
-				// EmailDesigner React component shell — tested helpers exported separately
-				"**/EmailDesigner.tsx",
 			],
 			thresholds: {
 				lines: 80,

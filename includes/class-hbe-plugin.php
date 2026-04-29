@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -20,6 +22,18 @@ class HBE_Plugin {
 	 * @return void
 	 */
 	public static function boot(): void {
+		if ( version_compare( $GLOBALS['wp_version'], '6.2', '<' ) ) {
+			add_action(
+				'admin_notices',
+				function () {
+					echo '<div class="notice notice-error"><p>'
+						. esc_html__( 'H-Bricks-Elements requires WordPress 6.2 or higher.', 'h-bricks-elements' )
+						. '</p></div>';
+				}
+			);
+			return;
+		}
+
 		HBE_Calendar_Post_Type::register();
 		HBE_Admin::register();
 		HBE_REST::register();
@@ -344,14 +358,14 @@ class HBE_Plugin {
 
 		$plugin_root_url  = plugin_dir_url( HBE_PLUGIN_FILE );
 		$plugin_root_path = plugin_dir_path( HBE_PLUGIN_FILE );
-		$cancel_js_path   = $plugin_root_path . 'dist/cancel.js';
-		$cancel_js_url    = $plugin_root_url . 'dist/cancel.js';
+		$cancel_js_path   = $plugin_root_path . 'dist/booking/cancel.js';
+		$cancel_js_url    = $plugin_root_url . 'dist/booking/cancel.js';
 		$cancel_js_ver    = file_exists( $cancel_js_path ) ? (string) filemtime( $cancel_js_path ) : HBE_VERSION;
 
 		status_header( 'error' === $state ? 400 : 200 );
 		header( 'Content-Type: text/html; charset=UTF-8' );
 
-		$data_json = wp_json_encode( $data );
+		$data_json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
 		if ( false === $data_json ) {
 			$data_json = '{}';
 		}

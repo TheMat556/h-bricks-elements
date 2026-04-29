@@ -43,6 +43,24 @@ if ( ! class_exists( 'WP_Error' ) ) {
 }
 
 // ------------------------------------------------------------------
+// Minimal WP_Post stub
+// ------------------------------------------------------------------
+if ( ! class_exists( 'WP_Post' ) ) {
+	class WP_Post {
+		public $ID = 0;
+		public $post_title = '';
+		public $post_status = 'publish';
+		public $post_type = 'post';
+
+		public function __construct( array $data = array() ) {
+			foreach ( $data as $k => $v ) {
+				$this->{$k} = $v;
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------------
 // Common WordPress helpers
 // ------------------------------------------------------------------
 if ( ! function_exists( 'is_wp_error' ) ) {
@@ -76,6 +94,67 @@ if ( ! function_exists( 'sanitize_email' ) ) {
 function sanitize_email( $email ) {
 	return filter_var( trim( (string) $email ), FILTER_SANITIZE_EMAIL );
 }
+}
+
+if ( ! function_exists( 'sanitize_textarea_field' ) ) {
+function sanitize_textarea_field( $str ) {
+	$str = (string) $str;
+	$str = strip_tags( $str );
+	return trim( preg_replace( "/\r\n|\r/", "\n", $str ) ?? '' );
+}
+}
+
+if ( ! function_exists( 'sanitize_hex_color' ) ) {
+function sanitize_hex_color( $color ) {
+	$color = trim( (string) $color );
+	if ( '' === $color ) {
+		return '';
+	}
+	if ( preg_match( '|^#([A-Fa-f0-9]{3}){1,2}$|', $color ) ) {
+		return $color;
+	}
+	return null;
+}
+}
+
+if ( ! function_exists( 'wp_kses' ) ) {
+function wp_kses( $string, $allowed_html, $allowed_protocols = array() ) {
+	return (string) $string;
+}
+}
+
+if ( ! isset( $GLOBALS['hbe_test_transients'] ) ) {
+	$GLOBALS['hbe_test_transients'] = array();
+}
+
+if ( ! function_exists( 'get_transient' ) ) {
+function get_transient( $key ) {
+	return isset( $GLOBALS['hbe_test_transients'][ $key ] ) ? $GLOBALS['hbe_test_transients'][ $key ] : false;
+}
+}
+
+if ( ! function_exists( 'set_transient' ) ) {
+function set_transient( $key, $value, $ttl = 0 ) {
+	$GLOBALS['hbe_test_transients'][ $key ] = $value;
+	return true;
+}
+}
+
+if ( ! function_exists( 'delete_transient' ) ) {
+function delete_transient( $key ) {
+	unset( $GLOBALS['hbe_test_transients'][ $key ] );
+	return true;
+}
+}
+
+if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
+	define( 'HOUR_IN_SECONDS', 3600 );
+}
+if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
+	define( 'MINUTE_IN_SECONDS', 60 );
+}
+if ( ! defined( 'DAY_IN_SECONDS' ) ) {
+	define( 'DAY_IN_SECONDS', 86400 );
 }
 
 if ( ! function_exists( 'sanitize_title' ) ) {
@@ -342,9 +421,23 @@ function get_post_type( $post = null ) {
 }
 }
 
+if ( ! isset( $GLOBALS['hbe_test_posts'] ) ) {
+	$GLOBALS['hbe_test_posts'] = array();
+}
+
+if ( ! function_exists( 'hbe_test_set_post' ) ) {
+function hbe_test_set_post( $post_id, $post ) {
+	$GLOBALS['hbe_test_posts'][ (int) $post_id ] = $post;
+}
+}
+
 if ( ! function_exists( 'get_post' ) ) {
 function get_post( $post = null, $output = OBJECT, $filter = 'raw' ) {
-	return null;
+	if ( is_object( $post ) ) {
+		return $post;
+	}
+	$id = (int) $post;
+	return isset( $GLOBALS['hbe_test_posts'][ $id ] ) ? $GLOBALS['hbe_test_posts'][ $id ] : null;
 }
 }
 
@@ -366,9 +459,33 @@ function update_post_meta( $post_id, $meta_key, $meta_value ) {
 }
 }
 
+if ( ! isset( $GLOBALS['hbe_test_post_meta'] ) ) {
+	$GLOBALS['hbe_test_post_meta'] = array();
+}
+
+if ( ! function_exists( 'hbe_test_set_post_meta' ) ) {
+function hbe_test_set_post_meta( $post_id, $key, $value ) {
+	$GLOBALS['hbe_test_post_meta'][ (int) $post_id ][ (string) $key ] = $value;
+}
+}
+
+if ( ! function_exists( 'hbe_test_reset_post_meta' ) ) {
+function hbe_test_reset_post_meta() {
+	$GLOBALS['hbe_test_post_meta'] = array();
+}
+}
+
 if ( ! function_exists( 'get_post_meta' ) ) {
 function get_post_meta( $post_id, $key = '', $single = false ) {
-	return $single ? '' : array();
+	$id    = (int) $post_id;
+	$store = isset( $GLOBALS['hbe_test_post_meta'][ $id ] ) ? $GLOBALS['hbe_test_post_meta'][ $id ] : array();
+	if ( '' === $key ) {
+		return $store;
+	}
+	if ( ! array_key_exists( $key, $store ) ) {
+		return $single ? '' : array();
+	}
+	return $single ? $store[ $key ] : array( $store[ $key ] );
 }
 }
 
@@ -408,11 +525,42 @@ function add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, 
 }
 }
 
-if ( ! function_exists( 'wp_mail' ) ) {
-function wp_mail( $to, $subject, $message, $headers = '', $attachments = array() ) {
-	return true;
+if ( ! isset( $GLOBALS['hbe_test_wp_mail_log'] ) ) {
+	$GLOBALS['hbe_test_wp_mail_log']    = array();
+	$GLOBALS['hbe_test_wp_mail_return'] = true;
 }
 
+if ( ! function_exists( 'wp_mail' ) ) {
+function wp_mail( $to, $subject, $message, $headers = '', $attachments = array() ) {
+	$GLOBALS['hbe_test_wp_mail_log'][] = array(
+		'to'          => $to,
+		'subject'     => $subject,
+		'message'     => $message,
+		'headers'     => $headers,
+		'attachments' => $attachments,
+	);
+	return (bool) $GLOBALS['hbe_test_wp_mail_return'];
+}
+
+}
+
+if ( ! function_exists( 'hbe_test_reset_wp_mail' ) ) {
+function hbe_test_reset_wp_mail() {
+	$GLOBALS['hbe_test_wp_mail_log']    = array();
+	$GLOBALS['hbe_test_wp_mail_return'] = true;
+}
+}
+
+if ( ! function_exists( 'hbe_test_get_wp_mail_log' ) ) {
+function hbe_test_get_wp_mail_log() {
+	return isset( $GLOBALS['hbe_test_wp_mail_log'] ) ? $GLOBALS['hbe_test_wp_mail_log'] : array();
+}
+}
+
+if ( ! function_exists( 'hbe_test_set_wp_mail_return' ) ) {
+function hbe_test_set_wp_mail_return( $value ) {
+	$GLOBALS['hbe_test_wp_mail_return'] = (bool) $value;
+}
 }
 
 if ( ! function_exists( 'is_email' ) ) {
@@ -428,8 +576,8 @@ function get_bloginfo( $show = "" ) {
 }
 
 if ( ! function_exists( 'wp_json_encode' ) ) {
-function wp_json_encode( $data ) {
-	return json_encode( $data );
+function wp_json_encode( $data, $options = 0, $depth = 512 ) {
+	return json_encode( $data, $options, $depth );
 }
 }
 
@@ -475,9 +623,10 @@ if ( ! isset( $GLOBALS['wpdb'] ) && ! class_exists( 'MockWpdb', false ) ) {
 		}
 
 		public function prepare( $query, ...$args ) {
-			$count = substr_count( $query, '%s' ) + substr_count( $query, '%d' ) + substr_count( $query, '%f' );
+			$count = substr_count( $query, '%s' ) + substr_count( $query, '%d' ) + substr_count( $query, '%f' ) + substr_count( $query, '%i' );
 			if ( $count === count( $args ) ) {
 				// Naive sprintf replacement for tests
+				$query = str_replace( '%i', '%s', $query );
 				$query = str_replace( "'%s'", '%s', $query );
 				$query = str_replace( '%s', "'%s'", $query );
 				return vsprintf( $query, $args );

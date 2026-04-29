@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 use PHPUnit\Framework\TestCase;
 
 // ------------------------------------------------------------------

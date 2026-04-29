@@ -176,8 +176,9 @@ class MockWpdb {
 	}
 
 	public function prepare( $query, ...$args ) {
-		$count = substr_count( $query, '%s' ) + substr_count( $query, '%d' ) + substr_count( $query, '%f' );
+		$count = substr_count( $query, '%s' ) + substr_count( $query, '%d' ) + substr_count( $query, '%f' ) + substr_count( $query, '%i' );
 		if ( $count === count( $args ) ) {
+			$query = str_replace( '%i', '%s', $query );
 			$query = str_replace( "'%s'", '%s', $query );
 			$query = str_replace( '%s', "'%s'", $query );
 			return vsprintf( $query, $args );

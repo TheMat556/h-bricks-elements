@@ -1094,19 +1094,21 @@ class Booking extends \Bricks\Element {
 	public function enqueue_scripts() {
 		$plugin_root_url  = plugin_dir_url( dirname( __DIR__, 1 ) );
 		$plugin_root_path = plugin_dir_path( dirname( __DIR__, 1 ) );
+		$css_path         = $plugin_root_path . 'dist/booking/booking.css';
+		$js_path          = $plugin_root_path . 'dist/booking/booking.js';
 
 		wp_enqueue_style(
 			'h-booking',
-			$plugin_root_url . 'dist/booking.css',
+			$plugin_root_url . 'dist/booking/booking.css',
 			array(),
-			filemtime( $plugin_root_path . 'dist/booking.css' )
+			file_exists( $css_path ) ? (string) filemtime( $css_path ) : HBE_VERSION
 		);
 
 		wp_enqueue_script(
 			'h-booking',
-			$plugin_root_url . 'dist/booking.js',
+			$plugin_root_url . 'dist/booking/booking.js',
 			array(),
-			filemtime( $plugin_root_path . 'dist/booking.js' ),
+			file_exists( $js_path ) ? (string) filemtime( $js_path ) : HBE_VERSION,
 			true
 		);
 	}

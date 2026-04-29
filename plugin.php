@@ -7,6 +7,8 @@
  * Text Domain: h-bricks-elements
  *
  * @package H-Bricks-Elements
+ * Requires at least: 6.2
+ * Requires PHP: 7.4
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

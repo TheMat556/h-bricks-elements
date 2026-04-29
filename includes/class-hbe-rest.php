@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -798,10 +800,31 @@ class HBE_REST {
 		$ip              = self::get_client_ip();
 		$rate_key        = 'hbe_rl_' . wp_hash( $ip . '_' . (int) $calendar->ID );
 		$global_rate_key = 'hbe_rl_' . wp_hash( $ip );
-		$attempts        = (int) get_transient( $rate_key );
-		$global_attempts = (int) get_transient( $global_rate_key );
 
-		if ( $attempts >= 5 || $global_attempts >= 5 ) {
+		if ( wp_using_ext_object_cache() ) {
+			// Atomic: increment first, then check.
+			$attempts = wp_cache_incr( $rate_key, 1, 'hbe_rate' );
+			if ( false === $attempts ) {
+				wp_cache_add( $rate_key, 1, 'hbe_rate', 10 * MINUTE_IN_SECONDS );
+				$attempts = 1;
+			}
+
+			$global_attempts = wp_cache_incr( $global_rate_key, 1, 'hbe_rate' );
+			if ( false === $global_attempts ) {
+				wp_cache_add( $global_rate_key, 1, 'hbe_rate', 10 * MINUTE_IN_SECONDS );
+				$global_attempts = 1;
+			}
+		} else {
+			// Non-atomic transient fallback — best-effort on sites without an external object cache.
+			$attempts        = get_transient( $rate_key );
+			$global_attempts = get_transient( $global_rate_key );
+			$attempts        = ( false === $attempts ) ? 1 : ( (int) $attempts + 1 );
+			$global_attempts = ( false === $global_attempts ) ? 1 : ( (int) $global_attempts + 1 );
+			set_transient( $rate_key, $attempts, 10 * MINUTE_IN_SECONDS );
+			set_transient( $global_rate_key, $global_attempts, 10 * MINUTE_IN_SECONDS );
+		}
+
+		if ( $attempts > 5 || $global_attempts > 5 ) {
 			header( 'Retry-After: 600' );
 			return new WP_Error(
 				'hbe_rate_limit',
@@ -809,10 +832,6 @@ class HBE_REST {
 				array( 'status' => 429 )
 			);
 		}
-
-		// Increment rate counter before validation to penalize invalid requests.
-		set_transient( $rate_key, $attempts + 1, 10 * MINUTE_IN_SECONDS );
-		set_transient( $global_rate_key, $global_attempts + 1, 10 * MINUTE_IN_SECONDS );
 
 		$settings = HBE_Calendar_Settings::get( (int) $calendar->ID );
 
@@ -1047,13 +1066,61 @@ class HBE_REST {
 	}
 
 	/**
+	 * Checks if an IP address matches a CIDR range.
+	 *
+	 * @param string $ip   IP address.
+	 * @param string $cidr CIDR range (e.g., '192.168.0.0/24').
+	 * @return bool
+	 */
+	private static function cidr_match( string $ip, string $cidr ): bool {
+		if ( strpos( $cidr, '/' ) === false ) {
+			return $ip === $cidr;
+		}
+
+		list( $subnet, $mask ) = explode( '/', $cidr, 2 );
+		$mask = (int) $mask;
+
+		$ip_bin    = inet_pton( $ip );
+		$subnet_bin = inet_pton( $subnet );
+
+		if ( false === $ip_bin || false === $subnet_bin ) {
+			return false;
+		}
+
+		// Convert mask to bit string.
+		$full_bytes = (int) ( $mask / 8 );
+		$remain_bits = $mask % 8;
+		$netmask = str_repeat( "\xff", $full_bytes );
+
+		if ( $remain_bits > 0 ) {
+			$netmask .= chr( 0xff << ( 8 - $remain_bits ) & 0xff );
+		}
+
+		$netmask = str_pad( $netmask, strlen( $ip_bin ), "\x00" );
+
+		return ( $ip_bin & $netmask ) === ( $subnet_bin & $netmask );
+	}
+
+	/**
 	 * Checks whether an IP address belongs to a private/local range.
 	 *
 	 * @param string $ip Validated IP address.
 	 * @return bool
 	 */
 	private static function is_private_ip( string $ip ): bool {
-		return (bool) filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) === false;
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+		}
+
+		// IPv6: explicit CIDR checks (FILTER_FLAG_NO_PRIV_RANGE only applies to IPv4 on PHP < 8.0).
+		$private_ranges = array( '::1', 'fe80::/10', 'fc00::/7' );
+		foreach ( $private_ranges as $range ) {
+			if ( self::cidr_match( $ip, $range ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -114,13 +116,13 @@ class HBE_Admin {
 	private static function enqueue_settings_assets(): void {
 		$theme    = get_user_meta( get_current_user_id(), 'wp_react_ui_theme', true );
 		$theme    = $theme ? $theme : 'light';
-		$css_path = HBE_PLUGIN_DIR . 'dist/settings.css';
-		$js_path  = HBE_PLUGIN_DIR . 'dist/settings.js';
+		$css_path = HBE_PLUGIN_DIR . 'dist/settings/settings.css';
+		$js_path  = HBE_PLUGIN_DIR . 'dist/settings/settings.js';
 
 		if ( file_exists( $css_path ) ) {
 			wp_enqueue_style(
 				'h-bricks-settings',
-				HBE_PLUGIN_URL . 'dist/settings.css',
+				HBE_PLUGIN_URL . 'dist/settings/settings.css',
 				array(),
 				filemtime( $css_path )
 			);
@@ -128,7 +130,7 @@ class HBE_Admin {
 
 		wp_enqueue_script(
 			'h-bricks-settings',
-			HBE_PLUGIN_URL . 'dist/settings.js',
+			HBE_PLUGIN_URL . 'dist/settings/settings.js',
 			array(),
 			file_exists( $js_path ) ? (string) filemtime( $js_path ) : HBE_VERSION,
 			true
@@ -154,13 +156,13 @@ class HBE_Admin {
 	private static function enqueue_email_designer_assets(): void {
 		$theme    = get_user_meta( get_current_user_id(), 'wp_react_ui_theme', true );
 		$theme    = $theme ? $theme : 'light';
-		$css_path = HBE_PLUGIN_DIR . 'dist/email-designer.css';
-		$js_path  = HBE_PLUGIN_DIR . 'dist/email-designer.js';
+		$css_path = HBE_PLUGIN_DIR . 'dist/email-designer/email-designer.css';
+		$js_path  = HBE_PLUGIN_DIR . 'dist/email-designer/email-designer.js';
 
 		if ( file_exists( $css_path ) ) {
 			wp_enqueue_style(
 				'h-bricks-email-designer',
-				HBE_PLUGIN_URL . 'dist/email-designer.css',
+				HBE_PLUGIN_URL . 'dist/email-designer/email-designer.css',
 				array(),
 				filemtime( $css_path )
 			);
@@ -168,7 +170,7 @@ class HBE_Admin {
 
 		wp_enqueue_script(
 			'h-bricks-email-designer',
-			HBE_PLUGIN_URL . 'dist/email-designer.js',
+			HBE_PLUGIN_URL . 'dist/email-designer/email-designer.js',
 			array(),
 			file_exists( $js_path ) ? (string) filemtime( $js_path ) : HBE_VERSION,
 			true

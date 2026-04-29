@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -378,13 +380,12 @@ class HBE_Calendar_Settings {
 	 */
 	private static function sanitize_mail_template( array $template ): array {
 		$defaults  = self::get_defaults()['mailSettings']['template'];
+		$primary_color    = isset( $template['primaryColor'] ) ? sanitize_hex_color( (string) $template['primaryColor'] ) : null;
+		$background_color = isset( $template['backgroundColor'] ) ? sanitize_hex_color( (string) $template['backgroundColor'] ) : null;
+
 		$sanitized = array(
-			'primaryColor'       => isset( $template['primaryColor'] )
-				? sanitize_hex_color( (string) $template['primaryColor'] ) ?? $defaults['primaryColor']
-				: $defaults['primaryColor'],
-			'backgroundColor'    => isset( $template['backgroundColor'] )
-				? sanitize_hex_color( (string) $template['backgroundColor'] ) ?? $defaults['backgroundColor']
-				: $defaults['backgroundColor'],
+			'primaryColor'       => ( null !== $primary_color && '' !== $primary_color ) ? $primary_color : $defaults['primaryColor'],
+			'backgroundColor'    => ( null !== $background_color && '' !== $background_color ) ? $background_color : $defaults['backgroundColor'],
 			'logoUrl'            => isset( $template['logoUrl'] )
 				? esc_url_raw( (string) $template['logoUrl'] )
 				: '',

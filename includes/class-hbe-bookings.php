@@ -5,6 +5,8 @@
  * @package H-Bricks-Elements
  */
 
+declare(strict_types=1);
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -399,20 +401,22 @@ class HBE_Bookings {
 		if ( $calendar_id > 0 ) {
 			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT {$columns} FROM {$table_name} WHERE id = %d AND calendar_id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					"SELECT {$columns} FROM %i WHERE id = %d AND calendar_id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
 					$booking_id,
 					$calendar_id
 				),
 				ARRAY_A
-			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			);
 		} else {
 			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT {$columns} FROM {$table_name} WHERE id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					"SELECT {$columns} FROM %i WHERE id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$table_name,
 					$booking_id
 				),
 				ARRAY_A
-			); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			);
 		}
 
 		return is_array( $row ) ? $row : null;
@@ -643,6 +647,9 @@ class HBE_Bookings {
 			'start'         => self::mysql_to_iso( (string) $row['start_datetime'] ),
 			'end'           => self::mysql_to_iso( (string) $row['end_datetime'] ),
 			'timezone'      => (string) $row['timezone'],
+			'meta'          => isset( $row['meta'] ) && '' !== $row['meta']
+				? (array) json_decode( (string) $row['meta'], true )
+				: null,
 			'createdAt'     => self::mysql_to_iso( (string) $row['created_at'] ),
 			'updatedAt'     => self::mysql_to_iso( (string) $row['updated_at'] ),
 		);
