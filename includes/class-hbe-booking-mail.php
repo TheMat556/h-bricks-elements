@@ -146,7 +146,7 @@ class HBE_Booking_Mail {
 	/**
 	 * Prepares a booking email without sending it.
 	 *
-	 * @param int                $calendar_id Calendar post ID.
+	 * @param int                 $calendar_id Calendar post ID.
 	 * @param array<string,mixed> $booking    Booking payload.
 	 * @param array<string,mixed> $options    Preparation options.
 	 * @return array<string,mixed>|WP_Error
@@ -276,7 +276,7 @@ class HBE_Booking_Mail {
 	/**
 	 * Sends a booking email.
 	 *
-	 * @param int                $calendar_id Calendar post ID.
+	 * @param int                 $calendar_id Calendar post ID.
 	 * @param array<string,mixed> $booking    Booking payload.
 	 * @param array<string,mixed> $options    Send options.
 	 * @return bool|WP_Error
@@ -348,7 +348,7 @@ class HBE_Booking_Mail {
 	/**
 	 * Returns a sample booking payload for test emails.
 	 *
-	 * @param int $calendar_id Calendar post ID.
+	 * @param int    $calendar_id Calendar post ID.
 	 * @param string $recipient Recipient address.
 	 * @return array<string,mixed>
 	 */
@@ -408,8 +408,8 @@ class HBE_Booking_Mail {
 	/**
 	 * Builds runtime template variables for a booking email.
 	 *
-	 * @param int                $calendar_id Calendar post ID.
-	 * @param WP_Post            $calendar_post Calendar post.
+	 * @param int                 $calendar_id Calendar post ID.
+	 * @param WP_Post             $calendar_post Calendar post.
 	 * @param array<string,mixed> $settings   Calendar settings.
 	 * @param array<string,mixed> $booking    Booking payload.
 	 * @param array<string,mixed> $options    Render options.

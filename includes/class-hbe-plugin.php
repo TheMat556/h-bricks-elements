@@ -51,7 +51,7 @@ class HBE_Plugin {
 	 *
 	 * @param WP_Error $error Mail error.
 	 */
-	public static function log_mail_failure( \WP_Error $error ): void {
+	public static function log_mail_failure( WP_Error $error ): void {
 		$context = HBE_Booking_Mail::get_active_mail_context();
 		// Redact potentially PII-containing data from the wp_mail error.
 		$error_data = $error->get_error_data();
@@ -288,9 +288,9 @@ class HBE_Plugin {
 		}
 
 		// Handle confirmation POST.
-		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? wp_unslash( (string) $_SERVER['REQUEST_METHOD'] ) : '';
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
 		if ( 'POST' === $request_method && ! empty( $_POST['hbe_confirm_cancel'] ) ) {
-			$nonce_value = isset( $_POST['_wpnonce'] ) ? wp_unslash( (string) $_POST['_wpnonce'] ) : '';
+			$nonce_value = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 			if ( ! wp_verify_nonce( $nonce_value, 'hbe_cancel_' . $booking_id . '_' . $calendar_id ) ) {
 				self::render_cancel_page( 'error', __( 'Invalid security token. Please refresh the page and try again.', 'h-bricks-elements' ) );
 				exit;
@@ -313,7 +313,7 @@ class HBE_Plugin {
 	/**
 	 * Outputs a standalone HTML cancellation page.
 	 *
-	 * @param string $state      'confirm' | 'success' | 'error'
+	 * @param string $state      'confirm' | 'success' | 'error'.
 	 * @param string $message    Error or info message.
 	 * @param int    $booking_id Booking ID (required for 'confirm' state).
 	 * @param int    $calendar_id Calendar ID (required for 'confirm' state).
@@ -380,9 +380,9 @@ class HBE_Plugin {
 </head>
 <body>
 <div id="hbe-cancel-root"></div>
-<script>window.hbeCancelData = ' . $data_json . ';</script>
-<script type="module" src="' . esc_url( add_query_arg( 'ver', $cancel_js_ver, $cancel_js_url ) ) . '"></script>
-</body>
+<script>window.hbeCancelData = ' . $data_json . ';</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $data_json is produced by wp_json_encode() with JSON_HEX_* flags.
+		echo '<script type="module" src="' . esc_url( add_query_arg( 'ver', $cancel_js_ver, $cancel_js_url ) ) . '"></script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- standalone cancel page, not part of WP theme.
+		echo '</body>
 </html>';
 	}
 }

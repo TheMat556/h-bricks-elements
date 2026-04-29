@@ -433,9 +433,16 @@ class HBE_Calendar_Settings {
 			'br'         => array(),
 			'center'     => array(),
 			'code'       => array(),
-			'div'        => array( 'style' => true, 'align' => true ),
+			'div'        => array(
+				'style' => true,
+				'align' => true,
+			),
 			'em'         => array(),
-			'font'       => array( 'color' => true, 'face' => true, 'size' => true ),
+			'font'       => array(
+				'color' => true,
+				'face' => true,
+				'size' => true,
+			),
 			'h1'         => array( 'style' => true ),
 			'h2'         => array( 'style' => true ),
 			'h3'         => array( 'style' => true ),
